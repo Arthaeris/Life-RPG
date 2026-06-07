@@ -1,26 +1,19 @@
 /* =========================================================
-   QUEST CHRONICLES - RENDER SYSTEM v1
-   UI ↔ Data ↔ Editor Bridge Layer
-========================================================= */
-
-
-/* =========================================================
-   INITIAL LOAD
+   QUEST CHRONICLES - RENDER SYSTEM v1.2
+   UI ONLY - STRICT MODE SAFE
 ========================================================= */
 
 window.addEventListener("load", () => {
     renderAll();
 });
 
-
 function renderAll() {
+    renderDashboard();
     renderAvailableQuests();
     renderDailyQuests();
     renderEvents();
     renderBoss();
-    renderDashboard();
 }
-
 
 /* =========================================================
    DASHBOARD
@@ -28,12 +21,12 @@ function renderAll() {
 
 function renderDashboard() {
 
-    const dashboard = document.getElementById("dashboard");
-    if (!dashboard) return;
+    const el = document.getElementById("dashboard");
+    if (!el) return;
 
     const activeQuest = playerData.activeQuests[0];
 
-    dashboard.innerHTML = `
+    el.innerHTML = `
         <div class="panel">
             <div class="panel-content">
                 <div class="title">${playerData.name}</div>
@@ -44,43 +37,46 @@ function renderDashboard() {
 
         <div class="panel">
             <div class="panel-content">
-                <div class="title">Gold</div>
-                <div class="sub">${playerData.gold}</div>
+                <div class="title">Currencies</div>
+                <div class="sub">Gold: ${playerData.gold}</div>
+                <div class="sub">Gems: ${playerData.gems}</div>
             </div>
         </div>
 
         <div class="panel">
             <div class="panel-content">
-                <div class="title">Active Quest</div>
-
+                <div class="title">Active Quest Slot</div>
                 ${
                     activeQuest
-                    ? `
-                        <div class="sub">${activeQuest.name}</div>
-                        <div class="btn primary" onclick="completeQuest('${activeQuest.id}')">
-                            Complete
-                        </div>
-                    `
-                    : `<div class="sub">No active quest</div>`
+                        ? `
+                            <div class="sub">${activeQuest.name}</div>
+                            <div class="btn primary" onclick="handleCompleteQuest('${activeQuest.id}')">
+                                Complete
+                            </div>
+                        `
+                        : `<div class="sub">No active quest</div>`
                 }
+            </div>
+        </div>
 
+        <div class="panel">
+            <div class="panel-content">
+                <div class="title">Title</div>
+                <div class="sub">${playerData.title}</div>
             </div>
         </div>
     `;
 }
 
-
 /* =========================================================
-   QUEST CARD (EDITOR-COMPATIBLE)
+   QUEST CARD
 ========================================================= */
 
 function questCard(q) {
 
     return `
         <div class="quest-card">
-
             <div class="quest-title">${q.name}</div>
-
             <div class="quest-sub">${q.description}</div>
 
             <div class="quest-sub">
@@ -91,205 +87,129 @@ function questCard(q) {
                 XP: ${q.rewards?.xp || 0} | Gold: ${q.rewards?.gold || 0}
             </div>
 
-            <div class="btn primary" onclick="acceptQuest('${q.id}')">
+            <div class="btn primary" onclick="handleAcceptQuest('${q.id}')">
                 Accept Quest
             </div>
-
         </div>
     `;
 }
 
-
 /* =========================================================
-   AVAILABLE QUESTS
+   QUEST LISTS
 ========================================================= */
 
 function renderAvailableQuests() {
+    const el = document.getElementById("available");
+    if (!el) return;
 
-    const container = document.getElementById("available");
-    if (!container) return;
-
-    container.innerHTML = (questDatabase.normal || [])
+    el.innerHTML = questDatabase
+        .filter(q => q.type === "normal")
         .map(questCard)
         .join("");
 }
-
-
-/* =========================================================
-   DAILY QUESTS
-========================================================= */
 
 function renderDailyQuests() {
+    const el = document.getElementById("daily");
+    if (!el) return;
 
-    const container = document.getElementById("daily");
-    if (!container) return;
-
-    container.innerHTML = (questDatabase.daily || [])
+    el.innerHTML = questDatabase
+        .filter(q => q.type === "daily")
         .map(questCard)
         .join("");
 }
-
-
-/* =========================================================
-   EVENT QUESTS (LIVE FILTERING)
-========================================================= */
 
 function renderEvents() {
 
-    const container = document.getElementById("events");
-    if (!container) return;
+    const el = document.getElementById("events");
+    if (!el) return;
 
     const activeEvents = getActiveEvents();
 
-    const eventQuests = (questDatabase.events || []).filter(q =>
-        (q.eventTags || []).some(tag =>
-            activeEvents.some(e => e.tag === tag)
+    el.innerHTML = questDatabase
+        .filter(q =>
+            q.type === "event" &&
+            (q.eventTags || []).some(tag =>
+                activeEvents.some(e => e.tag === tag)
+            )
         )
-    );
-
-    container.innerHTML = eventQuests
         .map(questCard)
         .join("");
 }
 
-
 /* =========================================================
-   BOSS RENDER (REGEN READY)
+   BOSS
 ========================================================= */
 
 function renderBoss() {
 
-    const container = document.getElementById("boss");
-    if (!container) return;
+    const el = document.getElementById("boss");
+    if (!el) return;
 
     const boss = bossDatabase[0];
 
     if (!boss) {
-        container.innerHTML = `<div class="sub">No boss available</div>`;
+        el.innerHTML = `<div class="sub">No boss available</div>`;
         return;
     }
 
-    const hpPercent = Math.max(0, (boss.hp / boss.maxHp) * 100);
+    const hp = Math.max(0, boss.hp);
+    const percent = (hp / boss.maxHp) * 100;
 
-    container.innerHTML = `
+    el.innerHTML = `
         <div class="panel">
             <div class="panel-content">
-
                 <div class="title">${boss.name}</div>
                 <div class="sub">${boss.description}</div>
 
                 <div class="sub">
-                    HP: ${boss.hp} / ${boss.maxHp}
+                    HP: ${hp} / ${boss.maxHp}
                 </div>
 
-                <div style="background:#2e3245; height:8px; border-radius:4px; overflow:hidden; margin:8px 0;">
-                    <div style="width:${hpPercent}%; background:var(--accent); height:100%;"></div>
+                <div style="height:8px;background:#2e3245;border-radius:4px;overflow:hidden;margin:8px 0;">
+                    <div style="width:${percent}%;height:100%;background:var(--accent);"></div>
                 </div>
 
-                <div class="btn primary" onclick="damageBoss('${boss.id}', 10)">
-                    Attack Boss (DEBUG)
+                <div class="btn primary" onclick="handleDamageBoss('${boss.id}', 10)">
+                    Attack Boss
                 </div>
-
             </div>
         </div>
     `;
 }
 
-
 /* =========================================================
-   EVENTS HELPER (SAFE)
+   UI ACTION HANDLERS
 ========================================================= */
 
-function getActiveEvents() {
-
-    const now = new Date();
-
-    return (eventDatabase || []).filter(e => {
-        const start = new Date(e.startDate);
-        const end = new Date(e.endDate);
-        return now >= start && now <= end;
-    });
-}
-
-
-/* =========================================================
-   QUEST ACTIONS (EDITOR COMPATIBLE SAFE LAYER)
-========================================================= */
-
-function acceptQuest(id) {
-
-    const all = [
-        ...(questDatabase.normal || []),
-        ...(questDatabase.daily || []),
-        ...(questDatabase.events || [])
-    ];
-
-    const quest = all.find(q => q.id === id);
-    if (!quest) return;
-
-    if (playerData.activeQuests.length >= playerData.activeQuestSlots) {
-        alert("No free quest slots!");
-        return;
-    }
-
-    playerData.activeQuests.push(quest);
+function handleAcceptQuest(id) {
+    acceptQuest(id);
     renderAll();
 }
 
-
-function completeQuest(id) {
-
-    const index = playerData.activeQuests.findIndex(q => q.id === id);
-    if (index === -1) return;
-
-    const quest = playerData.activeQuests[index];
-
-    playerData.xp += quest.rewards?.xp || 0;
-    playerData.gold += quest.rewards?.gold || 0;
-
-    playerData.lifetime.questsCompleted++;
-
-    playerData.activeQuests.splice(index, 1);
-
+function handleCompleteQuest(id) {
+    completeQuest(id);
     renderAll();
 }
 
-
-/* =========================================================
-   BOSS SYSTEM
-========================================================= */
-
-function damageBoss(id, dmg) {
-
-    const boss = bossDatabase.find(b => b.id === id);
-    if (!boss) return;
-
-    boss.hp -= dmg;
-
-    if (boss.hp < 0) boss.hp = 0;
-
+function handleDamageBoss(id, dmg) {
+    damageBoss(id, dmg);
     renderAll();
 }
 
-
 /* =========================================================
-   LIVE UPDATE LOOP (boss regen + UI sync)
+   LIVE LOOP
 ========================================================= */
 
 setInterval(() => {
 
-    // Boss regeneration system
-    const boss = bossDatabase[0];
-    if (boss && boss.hp < boss.maxHp) {
-        boss.hp += (boss.regenRate || 0);
-        if (boss.hp > boss.maxHp) boss.hp = boss.maxHp;
+    if (typeof processBossRegeneration === "function") {
+        processBossRegeneration();
     }
 
     renderDashboard();
     renderBoss();
 
 }, 1000);
-
 
 /* =========================================================
    DEBUG
