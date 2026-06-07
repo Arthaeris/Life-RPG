@@ -1,6 +1,6 @@
 /* =========================================================
-   QUEST CHRONICLES - SAVE SYSTEM v1.1
-   Persistence Layer (Editor-Safe + Schema Stable)
+   QUEST CHRONICLES - SAVE SYSTEM v1.3
+   Fits database.js v1.2 + systems.js v2.2 + render.js v1.2 + editor.js v0.4
 ========================================================= */
 
 
@@ -13,6 +13,15 @@ const SAVE_VERSION = 1;
 
 
 /* =========================================================
+   INITIAL LOAD
+========================================================= */
+
+window.addEventListener("load", () => {
+    loadGame();
+});
+
+
+/* =========================================================
    AUTO SAVE LOOP
 ========================================================= */
 
@@ -22,28 +31,41 @@ setInterval(() => {
 
 
 /* =========================================================
-   AUTO SAVE
+   SAVE FUNCTIONS
 ========================================================= */
 
 function autoSave() {
-    const data = collectSaveData();
-    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+    localStorage.setItem(SAVE_KEY, JSON.stringify(collectSaveData()));
 }
-
-
-/* =========================================================
-   MANUAL SAVE
-========================================================= */
 
 function manualSave() {
-    const data = collectSaveData();
-    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
-    console.log("Game saved manually.");
+    localStorage.setItem(SAVE_KEY, JSON.stringify(collectSaveData()));
+    console.log("Game saved.");
 }
 
 
 /* =========================================================
-   LOAD SAVE
+   COLLECT SAVE DATA
+========================================================= */
+
+function collectSaveData() {
+
+    return {
+        version: SAVE_VERSION,
+        timestamp: Date.now(),
+
+        playerData: cloneData(playerData),
+
+        questDatabase: cloneData(questDatabase),
+        eventDatabase: cloneData(eventDatabase),
+        bossDatabase: cloneData(bossDatabase),
+        itemDatabase: cloneData(itemDatabase)
+    };
+}
+
+
+/* =========================================================
+   LOAD GAME
 ========================================================= */
 
 function loadGame() {
@@ -58,35 +80,14 @@ function loadGame() {
         const data = JSON.parse(raw);
         applySaveData(data);
         console.log("Save loaded.");
-    } catch (e) {
-        console.error("Save load failed:", e);
+    } catch (err) {
+        console.error("Save load failed:", err);
     }
 }
 
 
 /* =========================================================
-   COLLECT SAVE DATA (SANITIZED SNAPSHOT)
-========================================================= */
-
-function collectSaveData() {
-
-    return {
-        version: SAVE_VERSION,
-
-        playerData: structuredClone(playerData),
-
-        questDatabase: structuredClone(questDatabase),
-        eventDatabase: structuredClone(eventDatabase),
-        bossDatabase: structuredClone(bossDatabase),
-        itemDatabase: structuredClone(itemDatabase),
-
-        timestamp: Date.now()
-    };
-}
-
-
-/* =========================================================
-   APPLY SAVE DATA (SAFE MERGE INSTEAD OF RAW OVERWRITE)
+   APPLY SAVE DATA
 ========================================================= */
 
 function applySaveData(data) {
@@ -94,26 +95,15 @@ function applySaveData(data) {
     if (!data || !data.playerData) return;
 
     if (data.version !== SAVE_VERSION) {
-        console.warn("Save version mismatch — attempting compatibility load.");
+        console.warn("Save version mismatch. Attempting load anyway.");
     }
 
-    /* -------------------------
-       PLAYER MERGE
-    ------------------------- */
     Object.assign(playerData, data.playerData);
 
-    /* -------------------------
-       DATABASE REBUILD (SAFE RESET)
-    ------------------------- */
-
-    rebuildDatabase("questDatabase", data.questDatabase);
-    rebuildDatabase("eventDatabase", data.eventDatabase);
-    rebuildDatabase("bossDatabase", data.bossDatabase);
-    rebuildDatabase("itemDatabase", data.itemDatabase);
-
-    /* -------------------------
-       UI REFRESH
-    ------------------------- */
+    rebuildArray(questDatabase, data.questDatabase);
+    rebuildArray(eventDatabase, data.eventDatabase);
+    rebuildArray(bossDatabase, data.bossDatabase);
+    rebuildArray(itemDatabase, data.itemDatabase);
 
     if (typeof renderAll === "function") {
         renderAll();
@@ -122,35 +112,15 @@ function applySaveData(data) {
 
 
 /* =========================================================
-   DATABASE REBUILDER (EDITOR SAFE)
+   ARRAY REBUILD HELPER
 ========================================================= */
 
-function rebuildDatabase(name, newData) {
+function rebuildArray(target, source) {
 
-    if (!newData) return;
+    if (!Array.isArray(target) || !Array.isArray(source)) return;
 
-    if (name === "questDatabase") {
-
-        questDatabase.normal = newData.normal || [];
-        questDatabase.daily = newData.daily || [];
-        questDatabase.events = newData.events || [];
-        questDatabase.boss = newData.boss || [];
-    }
-
-    if (name === "eventDatabase") {
-        eventDatabase.length = 0;
-        eventDatabase.push(...(newData || []));
-    }
-
-    if (name === "bossDatabase") {
-        bossDatabase.length = 0;
-        bossDatabase.push(...(newData || []));
-    }
-
-    if (name === "itemDatabase") {
-        itemDatabase.length = 0;
-        itemDatabase.push(...(newData || []));
-    }
+    target.length = 0;
+    target.push(...source);
 }
 
 
@@ -162,9 +132,10 @@ function exportSave() {
 
     const data = collectSaveData();
 
-    const blob = new Blob([JSON.stringify(data, null, 2)], {
-        type: "application/json"
-    });
+    const blob = new Blob(
+        [JSON.stringify(data, null, 2)],
+        { type: "application/json" }
+    );
 
     const url = URL.createObjectURL(blob);
 
@@ -185,13 +156,15 @@ function exportSave() {
 
 function importSave(file) {
 
+    if (!file) return;
+
     const reader = new FileReader();
 
     reader.onload = function (e) {
-
         try {
             const data = JSON.parse(e.target.result);
             applySaveData(data);
+            manualSave();
             console.log("Save imported.");
         } catch (err) {
             console.error("Invalid save file:", err);
@@ -203,12 +176,30 @@ function importSave(file) {
 
 
 /* =========================================================
-   RESET GAME
+   RESET SAVE
 ========================================================= */
 
 function resetGame() {
 
+    const confirmed = confirm("Reset all progress? This cannot be undone.");
+    if (!confirmed) return;
+
     localStorage.removeItem(SAVE_KEY);
 
-    console.log("Save cleared. Reload page to restart.");
+    console.log("Save reset. Reloading...");
+    location.reload();
+}
+
+
+/* =========================================================
+   CLONE HELPER
+========================================================= */
+
+function cloneData(data) {
+
+    if (typeof structuredClone === "function") {
+        return structuredClone(data);
+    }
+
+    return JSON.parse(JSON.stringify(data));
 }
