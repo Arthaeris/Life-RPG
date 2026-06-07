@@ -1,6 +1,6 @@
 /* =========================================================
-   QUEST CHRONICLES - SAVE SYSTEM v0.1
-   Persistence Layer (localStorage + JSON import/export)
+   QUEST CHRONICLES - SAVE SYSTEM v1.1
+   Persistence Layer (Editor-Safe + Schema Stable)
 ========================================================= */
 
 
@@ -26,11 +26,8 @@ setInterval(() => {
 ========================================================= */
 
 function autoSave() {
-
     const data = collectSaveData();
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
-
-    // silent save (no spam logs)
 }
 
 
@@ -41,7 +38,6 @@ function autoSave() {
 function manualSave() {
     const data = collectSaveData();
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
-
     console.log("Game saved manually.");
 }
 
@@ -69,7 +65,7 @@ function loadGame() {
 
 
 /* =========================================================
-   COLLECT SAVE DATA
+   COLLECT SAVE DATA (SANITIZED SNAPSHOT)
 ========================================================= */
 
 function collectSaveData() {
@@ -77,11 +73,12 @@ function collectSaveData() {
     return {
         version: SAVE_VERSION,
 
-        playerData,
-        questDatabase,
-        eventDatabase,
-        bossDatabase,
-        itemDatabase,
+        playerData: structuredClone(playerData),
+
+        questDatabase: structuredClone(questDatabase),
+        eventDatabase: structuredClone(eventDatabase),
+        bossDatabase: structuredClone(bossDatabase),
+        itemDatabase: structuredClone(itemDatabase),
 
         timestamp: Date.now()
     };
@@ -89,27 +86,35 @@ function collectSaveData() {
 
 
 /* =========================================================
-   APPLY SAVE DATA
+   APPLY SAVE DATA (SAFE MERGE INSTEAD OF RAW OVERWRITE)
 ========================================================= */
 
 function applySaveData(data) {
 
     if (!data || !data.playerData) return;
 
-    // Basic version guard (future-proofing)
     if (data.version !== SAVE_VERSION) {
         console.warn("Save version mismatch — attempting compatibility load.");
     }
 
+    /* -------------------------
+       PLAYER MERGE
+    ------------------------- */
     Object.assign(playerData, data.playerData);
 
-    // Deep overwrite for databases
-    overwriteDatabase("questDatabase", data.questDatabase);
-    overwriteDatabase("eventDatabase", data.eventDatabase);
-    overwriteDatabase("bossDatabase", data.bossDatabase);
-    overwriteDatabase("itemDatabase", data.itemDatabase);
+    /* -------------------------
+       DATABASE REBUILD (SAFE RESET)
+    ------------------------- */
 
-    // re-render UI after load
+    rebuildDatabase("questDatabase", data.questDatabase);
+    rebuildDatabase("eventDatabase", data.eventDatabase);
+    rebuildDatabase("bossDatabase", data.bossDatabase);
+    rebuildDatabase("itemDatabase", data.itemDatabase);
+
+    /* -------------------------
+       UI REFRESH
+    ------------------------- */
+
     if (typeof renderAll === "function") {
         renderAll();
     }
@@ -117,14 +122,15 @@ function applySaveData(data) {
 
 
 /* =========================================================
-   SAFE DATABASE OVERWRITE
+   DATABASE REBUILDER (EDITOR SAFE)
 ========================================================= */
 
-function overwriteDatabase(name, newData) {
+function rebuildDatabase(name, newData) {
 
     if (!newData) return;
 
     if (name === "questDatabase") {
+
         questDatabase.normal = newData.normal || [];
         questDatabase.daily = newData.daily || [];
         questDatabase.events = newData.events || [];
@@ -133,28 +139,29 @@ function overwriteDatabase(name, newData) {
 
     if (name === "eventDatabase") {
         eventDatabase.length = 0;
-        eventDatabase.push(...newData);
+        eventDatabase.push(...(newData || []));
     }
 
     if (name === "bossDatabase") {
         bossDatabase.length = 0;
-        bossDatabase.push(...newData);
+        bossDatabase.push(...(newData || []));
     }
 
     if (name === "itemDatabase") {
         itemDatabase.length = 0;
-        itemDatabase.push(...newData);
+        itemDatabase.push(...(newData || []));
     }
 }
 
 
 /* =========================================================
-   EXPORT SAVE (DOWNLOAD JSON FILE)
+   EXPORT SAVE
 ========================================================= */
 
 function exportSave() {
 
     const data = collectSaveData();
+
     const blob = new Blob([JSON.stringify(data, null, 2)], {
         type: "application/json"
     });
@@ -173,7 +180,7 @@ function exportSave() {
 
 
 /* =========================================================
-   IMPORT SAVE (FROM FILE INPUT)
+   IMPORT SAVE
 ========================================================= */
 
 function importSave(file) {
