@@ -1,6 +1,6 @@
 /* =========================================================
-   QUEST CHRONICLES - DATABASE v1
-   Core Data Layer (Editor-Compatible Schema)
+   QUEST CHRONICLES - DATABASE v1.2
+   Unified Data Model for render.js v1.2 + systems.js v2.2
 ========================================================= */
 
 
@@ -10,6 +10,7 @@
 
 const playerData = {
     name: "Hero",
+
     level: 1,
     xp: 0,
     xpToNext: 100,
@@ -46,197 +47,191 @@ const playerData = {
 
 
 /* =========================================================
-   QUEST DATABASE (UNIFIED STRUCTURE)
+   QUEST TYPES
 ========================================================= */
 
-const questDatabase = {
-    normal: [],
-    daily: [],
-    events: [],
-    boss: []
+const QUEST_TYPES = {
+    NORMAL: "normal",
+    DAILY: "daily",
+    EVENT: "event",
+    BOSS: "boss"
 };
 
 
 /* =========================================================
-   EVENT DATABASE
+   QUEST DATABASE
+   Unified array model.
+   render.js filters by quest.type.
+   systems.js finds quests by id.
 ========================================================= */
 
-const eventDatabase = [];
+const questDatabase = [
+    {
+        id: "q001",
+        name: "Morning Walk",
+        description: "Take a 15 minute walk outside.",
+        type: QUEST_TYPES.NORMAL,
+
+        tags: ["Fitness", "Health"],
+        eventTags: [],
+
+        rarity: "Common",
+
+        rewards: {
+            xp: 25,
+            gold: 15,
+            stats: {
+                Fitness: 5,
+                Health: 3,
+                Wisdom: 0,
+                Home: 0
+            }
+        },
+
+        timeLimit: null,
+
+        scaling: {
+            xpMultiplier: 1,
+            goldMultiplier: 1
+        }
+    },
+
+    {
+        id: "d001",
+        name: "Drink Water",
+        description: "Drink at least 2 liters of water.",
+        type: QUEST_TYPES.DAILY,
+
+        tags: ["Health"],
+        eventTags: [],
+
+        rarity: "Daily",
+
+        rewards: {
+            xp: 15,
+            gold: 5,
+            stats: {
+                Fitness: 0,
+                Health: 4,
+                Wisdom: 0,
+                Home: 0
+            }
+        },
+
+        reset: "daily",
+
+        timeLimit: null,
+
+        scaling: {
+            xpMultiplier: 1,
+            goldMultiplier: 1
+        }
+    },
+
+    {
+        id: "eq001",
+        name: "Carve a Pumpkin",
+        description: "Create or decorate a pumpkin.",
+        type: QUEST_TYPES.EVENT,
+
+        tags: ["Home", "Creativity"],
+        eventTags: ["halloween2026"],
+
+        rarity: "Event",
+
+        rewards: {
+            xp: 50,
+            gold: 40,
+            stats: {
+                Fitness: 0,
+                Health: 0,
+                Wisdom: 0,
+                Home: 10
+            }
+        },
+
+        timeLimit: null,
+
+        scaling: {
+            xpMultiplier: 1,
+            goldMultiplier: 1
+        }
+    }
+];
+
+
+/* =========================================================
+   EVENT DATABASE
+   render.js shows event quests only if their eventTags match
+   an active event returned by systems.js getActiveEvents().
+========================================================= */
+
+const eventDatabase = [
+    {
+        id: "e001",
+
+        name: "Halloween 2026",
+        tag: "halloween2026",
+        description: "Spooky seasonal event.",
+
+        startDate: "2026-10-15",
+        endDate: "2026-11-01",
+
+        artwork: "",
+
+        isActiveOverride: false
+    }
+];
 
 
 /* =========================================================
    BOSS DATABASE
+   systems.js handles damage.
+   render.js displays bossDatabase[0].
+   processBossRegeneration() uses regenRate.
 ========================================================= */
 
-const bossDatabase = [];
+const bossDatabase = [
+    {
+        id: "boss001",
 
+        name: "Goblin King",
+        description: "A stubborn early-game boss.",
 
-/* =========================================================
-   ITEM DATABASE (SHOP + INVENTORY UNIFIED)
-========================================================= */
+        maxHp: 100,
+        hp: 100,
 
-const itemDatabase = [];
+        regenRate: 1,
 
+        weaknesses: ["Fitness"],
+        resistances: ["Home"],
 
-/* =========================================================
-   SAMPLE DATA (TESTING ONLY)
-========================================================= */
+        abilities: [
+            {
+                name: "Tax Raid",
+                effect: "gold_drain"
+            },
+            {
+                name: "Pressure Curse",
+                effect: "quest_timer_reduction"
+            }
+        ],
 
-questDatabase.normal.push({
-    id: "q001",
-
-    name: "Morning Walk",
-    description: "Take a 15 minute walk outside.",
-
-    type: "normal",
-
-    tags: ["Fitness", "Health"],
-    eventTags: [],
-
-    rarity: "Common",
-
-    rewards: {
-        xp: 25,
-        gold: 15,
-        stats: {
-            Fitness: 5,
-            Health: 3,
-            Wisdom: 0,
-            Home: 0
-        }
-    },
-
-    timeLimit: null,
-
-    scaling: {
-        xpMultiplier: 1,
-        goldMultiplier: 1
-    }
-});
-
-
-questDatabase.daily.push({
-    id: "d001",
-
-    name: "Drink Water",
-    description: "Drink at least 2 liters of water.",
-
-    type: "daily",
-
-    tags: ["Health"],
-    eventTags: [],
-
-    rarity: "Daily",
-
-    rewards: {
-        xp: 15,
-        gold: 5,
-        stats: {
-            Health: 4,
-            Fitness: 0,
-            Wisdom: 0,
-            Home: 0
-        }
-    },
-
-    reset: "daily",
-
-    scaling: {
-        xpMultiplier: 1,
-        goldMultiplier: 1
-    }
-});
-
-
-questDatabase.events.push({
-    id: "eq001",
-
-    name: "Carve a Pumpkin",
-    description: "Create or decorate a pumpkin.",
-
-    type: "event",
-
-    tags: ["Home", "Creativity"],
-    eventTags: ["halloween2026"],
-
-    rarity: "Event",
-
-    rewards: {
-        xp: 50,
-        gold: 40,
-        stats: {
-            Home: 10,
-            Fitness: 0,
-            Health: 0,
-            Wisdom: 0
+        rewards: {
+            xp: 200,
+            gold: 500,
+            title: "Goblin Slayer"
         }
     }
-});
+];
 
 
 /* =========================================================
-   EVENT SYSTEM
+   ITEM DATABASE
+   Unified shop + inventory item structure.
 ========================================================= */
 
-eventDatabase.push({
-    id: "e001",
-
-    name: "Halloween 2026",
-    tag: "halloween2026",
-
-    description: "Spooky seasonal event.",
-
-    startDate: "2026-10-15",
-    endDate: "2026-11-01",
-
-    artwork: "",
-
-    isActiveOverride: false
-});
-
-
-/* =========================================================
-   BOSSES (WITH REGENERATION SYSTEM)
-========================================================= */
-
-bossDatabase.push({
-    id: "boss001",
-
-    name: "Goblin King",
-    description: "A stubborn early-game boss.",
-
-    maxHp: 100,
-    hp: 100,
-
-    regenRate: 1,   // HP per tick (future loop system)
-
-    weaknesses: ["Fitness"],
-    resistances: ["Home"],
-
-    abilities: [
-        {
-            name: "Tax Raid",
-            effect: "gold_drain"
-        },
-        {
-            name: "Pressure Curse",
-            effect: "quest_timer_reduction"
-        }
-    ],
-
-    rewards: {
-        xp: 200,
-        gold: 500,
-        title: "Goblin Slayer"
-    }
-});
-
-
-/* =========================================================
-   ITEMS (SHOP + INVENTORY)
-========================================================= */
-
-itemDatabase.push(
+const itemDatabase = [
     {
         id: "i001",
 
@@ -268,7 +263,16 @@ itemDatabase.push(
             duration: 3600
         }
     }
-);
+];
+
+
+/* =========================================================
+   DATABASE HELPERS
+========================================================= */
+
+function getQuestsByType(type) {
+    return questDatabase.filter(q => q.type === type);
+}
 
 
 /* =========================================================
@@ -280,3 +284,5 @@ window.questDatabase = questDatabase;
 window.eventDatabase = eventDatabase;
 window.bossDatabase = bossDatabase;
 window.itemDatabase = itemDatabase;
+window.QUEST_TYPES = QUEST_TYPES;
+window.getQuestsByType = getQuestsByType;
