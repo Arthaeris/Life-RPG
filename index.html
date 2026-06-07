@@ -6,7 +6,6 @@
 <title>Quest Chronicles</title>
 
 <style>
-
 /* =========================================================
    THEME SYSTEM
 ========================================================= */
@@ -32,7 +31,9 @@ body {
     color: var(--text);
 }
 
-.hidden { display: none; }
+.hidden {
+    display: none;
+}
 
 /* =========================================================
    APP LAYOUT
@@ -43,10 +44,6 @@ body {
     display: flex;
     flex-direction: column;
 }
-
-/* =========================================================
-   SCREEN AREA
-========================================================= */
 
 #screen {
     flex: 1;
@@ -85,11 +82,13 @@ body {
 .title {
     font-weight: bold;
     font-size: 14px;
+    margin-bottom: 4px;
 }
 
 .sub {
     font-size: 12px;
     color: var(--muted);
+    line-height: 1.4;
 }
 
 /* =========================================================
@@ -105,6 +104,7 @@ body {
     text-align: center;
     cursor: pointer;
     margin-top: 8px;
+    user-select: none;
 }
 
 .btn.primary {
@@ -112,7 +112,7 @@ body {
 }
 
 /* =========================================================
-   NAV
+   NAVIGATION
 ========================================================= */
 
 #bottomNav {
@@ -124,10 +124,11 @@ body {
 .nav-btn {
     flex: 1;
     text-align: center;
-    padding: 10px;
+    padding: 10px 4px;
     font-size: 12px;
     color: var(--muted);
     cursor: pointer;
+    user-select: none;
 }
 
 .nav-btn.active {
@@ -152,6 +153,8 @@ body {
     border: 1px solid var(--border);
     background: var(--panel);
     cursor: pointer;
+    border-radius: 6px;
+    user-select: none;
 }
 
 .tab.active {
@@ -159,7 +162,7 @@ body {
 }
 
 /* =========================================================
-   QUEST CARD
+   QUEST CARDS
 ========================================================= */
 
 .quest-card {
@@ -172,23 +175,49 @@ body {
 
 .quest-title {
     font-weight: bold;
+    margin-bottom: 4px;
 }
 
 .quest-sub {
     font-size: 12px;
     color: var(--muted);
+    margin-bottom: 4px;
+}
+
+/* =========================================================
+   FORMS
+========================================================= */
+
+input,
+textarea,
+select {
+    box-sizing: border-box;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    font-family: monospace;
 }
 
 /* =========================================================
    LAYOUT STATES
 ========================================================= */
 
-.screen { display: none; }
-.screen.active { display: block; }
+.screen {
+    display: none;
+}
 
-.subscreen { display: none; }
-.subscreen.active { display: block; }
+.screen.active {
+    display: block;
+}
 
+.subscreen {
+    display: none;
+}
+
+.subscreen.active {
+    display: block;
+}
 </style>
 </head>
 
@@ -196,10 +225,7 @@ body {
 
 <div id="app">
 
-<!-- =========================================================
-   GLOBAL EDITOR CONTAINER (editor.js injects here)
-========================================================= -->
-<div id="editorContainer"></div>
+<main id="screen">
 
 <!-- =========================================================
      DASHBOARD
@@ -208,25 +234,8 @@ body {
 
     <div class="panel">
         <div class="panel-content">
-            <div class="title">Character</div>
-            <div class="sub">Name: Hero</div>
-            <div class="sub">Level: 1</div>
-            <div class="sub">XP: 0 / 100</div>
-        </div>
-    </div>
-
-    <div class="panel">
-        <div class="panel-content">
-            <div class="title">Currencies</div>
-            <div class="sub">Gold: 100</div>
-            <div class="sub">Gems: 0</div>
-        </div>
-    </div>
-
-    <div class="panel">
-        <div class="panel-content">
-            <div class="title">Active Quest Slot</div>
-            <div class="sub">Empty</div>
+            <div class="title">Dashboard</div>
+            <div class="sub">Loading character data...</div>
         </div>
     </div>
 
@@ -259,7 +268,7 @@ body {
     <div class="panel">
         <div class="panel-content">
             <div class="title">Profile</div>
-            <div class="sub">Level / XP / Stats placeholder</div>
+            <div class="sub">Character statistics and achievements will go here.</div>
         </div>
     </div>
 
@@ -273,7 +282,7 @@ body {
     <div class="panel">
         <div class="panel-content">
             <div class="title">Shop</div>
-            <div class="sub">Consumables / Boosts / Items</div>
+            <div class="sub">Consumables, boosts, utility items, prestige items and titles will go here.</div>
         </div>
     </div>
 
@@ -287,66 +296,77 @@ body {
     <div class="panel">
         <div class="panel-content">
             <div class="title">Inventory</div>
-            <div class="sub">Items go here</div>
+            <div class="sub">Owned items will go here.</div>
         </div>
     </div>
 
 </div>
 
 <!-- =========================================================
-     SETTINGS + EDITORS
+     SETTINGS
 ========================================================= -->
 <div id="settings" class="screen">
 
     <div class="panel">
         <div class="panel-content">
-            <div class="title">Settings</div>
-            <div class="sub">Save / Import / Export</div>
+            <div class="title">Save Manager</div>
+            <div class="sub">Save, load, export, import or reset progress.</div>
 
-            <div class="btn">Save Game</div>
-            <div class="btn">Load Game</div>
-            <div class="btn">Export Save</div>
+            <div class="btn primary" onclick="manualSave()">Save Game</div>
+            <div class="btn" onclick="loadGame()">Load Game</div>
+            <div class="btn" onclick="exportSave()">Export Save</div>
+
+            <input type="file" accept=".json,application/json" onchange="importSave(this.files[0])" style="width:100%;padding:8px;margin-top:8px;">
+
+            <div class="btn" onclick="resetGame()">Reset Game</div>
         </div>
     </div>
 
     <div class="panel">
         <div class="panel-content">
             <div class="title">Quest Editor</div>
-            <div class="sub">Create and manage quests</div>
-            <div class="btn primary" onclick="openEditor('quest')">+ Create Quest</div>
+            <div class="sub">Create, edit and delete quests.</div>
+            <div class="btn primary" onclick="openEditor('quest')">Open Quest Editor</div>
         </div>
     </div>
 
     <div class="panel">
         <div class="panel-content">
             <div class="title">Event Editor</div>
-            <div class="sub">Create seasonal events</div>
-            <div class="btn primary" onclick="openEditor('event')">+ Create Event</div>
+            <div class="sub">Create seasonal events with start and end dates.</div>
+            <div class="btn primary" onclick="openEditor('event')">Open Event Editor</div>
         </div>
     </div>
 
     <div class="panel">
         <div class="panel-content">
             <div class="title">Boss Editor</div>
-            <div class="sub">Create bosses</div>
-            <div class="btn primary" onclick="openEditor('boss')">+ Create Boss</div>
+            <div class="sub">Create bosses, rewards, weaknesses and regeneration.</div>
+            <div class="btn primary" onclick="openEditor('boss')">Open Boss Editor</div>
         </div>
     </div>
 
     <div class="panel">
         <div class="panel-content">
             <div class="title">Item Editor</div>
-            <div class="sub">Create shop & inventory items</div>
-            <div class="btn primary" onclick="openEditor('item')">+ Create Item</div>
+            <div class="sub">Create shop and inventory items.</div>
+            <div class="btn primary" onclick="openEditor('item')">Open Item Editor</div>
         </div>
     </div>
 
+    <!-- =====================================================
+         EDITOR OUTPUT
+    ====================================================== -->
+    <div id="editorContainer"></div>
+
 </div>
 
+</main>
+
 <!-- =========================================================
-     BOTTOM NAV
+     BOTTOM NAVIGATION
 ========================================================= -->
-<div id="bottomNav">
+<nav id="bottomNav">
 
     <div class="nav-btn active" onclick="switchScreen('dashboard', this)">Dashboard</div>
     <div class="nav-btn" onclick="switchScreen('quests', this)">Quests</div>
@@ -355,39 +375,57 @@ body {
     <div class="nav-btn" onclick="switchScreen('inventory', this)">Inv</div>
     <div class="nav-btn" onclick="switchScreen('settings', this)">Settings</div>
 
-</div>
+</nav>
 
 </div>
 
 <script>
-
 /* =========================================================
-   NAVIGATION
+   SCREEN NAVIGATION
 ========================================================= */
 
 function switchScreen(id, el) {
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
 
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    if (el) el.classList.add('active');
+    document.querySelectorAll(".screen").forEach(screen => {
+        screen.classList.remove("active");
+    });
+
+    const target = document.getElementById(id);
+    if (target) target.classList.add("active");
+
+    document.querySelectorAll(".nav-btn").forEach(btn => {
+        btn.classList.remove("active");
+    });
+
+    if (el) el.classList.add("active");
 }
+
 
 /* =========================================================
-   QUEST TABS
+   QUEST SUBTAB NAVIGATION
 ========================================================= */
 
-function switchQuestTab(tab, el) {
-    document.querySelectorAll('.subscreen').forEach(s => s.classList.remove('active'));
-    document.getElementById(tab).classList.add('active');
+function switchQuestTab(id, el) {
 
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    if (el) el.classList.add('active');
+    document.querySelectorAll(".subscreen").forEach(screen => {
+        screen.classList.remove("active");
+    });
+
+    const target = document.getElementById(id);
+    if (target) target.classList.add("active");
+
+    document.querySelectorAll(".tab").forEach(tab => {
+        tab.classList.remove("active");
+    });
+
+    if (el) el.classList.add("active");
 }
-
 </script>
 
-<!-- external systems (you already have these files) -->
+<!-- =========================================================
+     SCRIPT LOAD ORDER
+     database → systems → render → save → editor
+========================================================= -->
 <script src="database.js"></script>
 <script src="systems.js"></script>
 <script src="render.js"></script>
