@@ -1,6 +1,6 @@
 /* =========================================================
-   QUEST CHRONICLES - SYSTEMS v0.1
-   Core Gameplay Logic Layer
+   QUEST CHRONICLES - SYSTEMS v1.1
+   Core Gameplay Logic Layer (Editor + Save Safe + Scalable)
 ========================================================= */
 
 
@@ -9,14 +9,17 @@
 ========================================================= */
 
 function findQuestById(id) {
+
     const all = [
-        ...questDatabase.normal,
-        ...questDatabase.daily,
-        ...questDatabase.events,
-        ...questDatabase.boss
+        ...(questDatabase.normal || []),
+        ...(questDatabase.daily || []),
+        ...(questDatabase.events || []),
+        ...(questDatabase.boss || [])
     ];
+
     return all.find(q => q.id === id);
 }
+
 
 function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
@@ -24,34 +27,28 @@ function clamp(value, min, max) {
 
 
 /* =========================================================
-   QUEST SLOT SYSTEM (OPTION C)
-   Auto-assign + future reordering support
+   QUEST SLOT SYSTEM
 ========================================================= */
-
-function getActiveSlots() {
-    return playerData.activeQuests;
-}
 
 function addQuestToActive(quest) {
 
-    const slots = playerData.activeQuestSlots;
-
-    if (playerData.activeQuests.length >= slots) {
+    if (playerData.activeQuests.length >= playerData.activeQuestSlots) {
         console.log("No free quest slots.");
+        return false;
+    }
+
+    if (playerData.activeQuests.some(q => q.id === quest.id)) {
+        console.log("Quest already active.");
         return false;
     }
 
     playerData.activeQuests.push({
         ...quest,
-        acceptedAt: Date.now()
+        acceptedAt: Date.now(),
+        progress: 0
     });
 
     return true;
-}
-
-function removeActiveQuest(id) {
-    playerData.activeQuests =
-        playerData.activeQuests.filter(q => q.id !== id);
 }
 
 
@@ -73,29 +70,36 @@ function acceptQuest(questId) {
 
 
 /* =========================================================
+   QUEST REMOVE SYSTEM
+========================================================= */
+
+function removeActiveQuest(id) {
+    playerData.activeQuests =
+        playerData.activeQuests.filter(q => q.id !== id);
+}
+
+
+/* =========================================================
    QUEST COMPLETE SYSTEM
 ========================================================= */
 
 function completeQuest(questId) {
 
-    const questIndex = playerData.activeQuests.findIndex(q => q.id === questId);
-    if (questIndex === -1) return;
+    const index = playerData.activeQuests.findIndex(q => q.id === questId);
+    if (index === -1) return;
 
-    const quest = playerData.activeQuests[questIndex];
-
-    /* -------------------------
-       APPLY REWARDS
-    ------------------------- */
+    const quest = playerData.activeQuests[index];
 
     applyQuestRewards(quest);
 
-    /* -------------------------
-       REMOVE QUEST
-    ------------------------- */
-
-    playerData.activeQuests.splice(questIndex, 1);
+    playerData.activeQuests.splice(index, 1);
 
     playerData.lifetime.questsCompleted++;
+
+    const type = quest.type || "normal";
+    if (playerData.lifetime.questsByType[type] !== undefined) {
+        playerData.lifetime.questsByType[type]++;
+    }
 
     console.log("Quest completed:", quest.name);
 }
@@ -107,22 +111,18 @@ function completeQuest(questId) {
 
 function applyQuestRewards(quest) {
 
-    if (!quest.rewards) return;
+    const rewards = quest.rewards;
+    if (!rewards) return;
 
-    /* XP */
-    if (quest.rewards.xp) {
-        gainXP(quest.rewards.xp);
+    if (rewards.xp) gainXP(rewards.xp);
+
+    if (rewards.gold) {
+        playerData.gold += rewards.gold;
     }
 
-    /* GOLD */
-    if (quest.rewards.gold) {
-        playerData.gold += quest.rewards.gold;
-    }
-
-    /* STATS */
-    if (quest.rewards.stats) {
-        for (const stat in quest.rewards.stats) {
-            gainStatXP(stat, quest.rewards.stats[stat]);
+    if (rewards.stats) {
+        for (const stat in rewards.stats) {
+            gainStatXP(stat, rewards.stats[stat]);
         }
     }
 }
@@ -133,6 +133,7 @@ function applyQuestRewards(quest) {
 ========================================================= */
 
 function gainXP(amount) {
+
     playerData.xp += amount;
 
     while (playerData.xp >= playerData.xpToNext) {
@@ -140,18 +141,20 @@ function gainXP(amount) {
     }
 }
 
+
 function levelUp() {
+
     playerData.xp -= playerData.xpToNext;
     playerData.level++;
 
     playerData.xpToNext = Math.floor(playerData.xpToNext * 1.15);
 
-    console.log("LEVEL UP! ->", playerData.level);
+    console.log("LEVEL UP ->", playerData.level);
 }
 
 
 /* =========================================================
-   STAT SYSTEM
+   STAT SYSTEM (SCALABLE)
 ========================================================= */
 
 function gainStatXP(stat, amount) {
@@ -164,7 +167,7 @@ function gainStatXP(stat, amount) {
 
     const threshold = 50 * s.level;
 
-    if (s.xp >= threshold) {
+    while (s.xp >= threshold) {
         s.xp -= threshold;
         s.level++;
     }
@@ -172,7 +175,7 @@ function gainStatXP(stat, amount) {
 
 
 /* =========================================================
-   BOSS SYSTEM (BASIC)
+   BOSS SYSTEM
 ========================================================= */
 
 function damageBoss(bossId, amount) {
@@ -187,21 +190,21 @@ function damageBoss(bossId, amount) {
     }
 }
 
+
 function defeatBoss(boss) {
 
     console.log("Boss defeated:", boss.name);
 
-    playerData.gold += boss.rewards.gold || 0;
-    gainXP(boss.rewards.xp || 0);
+    const rewards = boss.rewards || {};
 
-    if (boss.rewards.title) {
-        playerData.title = boss.rewards.title;
-    }
+    if (rewards.gold) playerData.gold += rewards.gold;
+    if (rewards.xp) gainXP(rewards.xp);
+    if (rewards.title) playerData.title = rewards.title;
 }
 
 
 /* =========================================================
-   ITEM SYSTEM
+   ITEM SYSTEM (EXTENSION READY)
 ========================================================= */
 
 function useItem(itemId) {
@@ -209,18 +212,21 @@ function useItem(itemId) {
     const item = itemDatabase.find(i => i.id === itemId);
     if (!item) return;
 
-    switch (item.effect.type) {
+    const effect = item.effect;
+    if (!effect) return;
+
+    switch (effect.type) {
 
         case "refresh_quest_slot":
-            console.log("Quest slot refreshed (placeholder)");
+            console.log("Quest slot refresh triggered");
             break;
 
         case "xp_multiplier":
-            console.log("XP boost applied (placeholder)");
+            console.log("XP multiplier applied:", effect.value);
             break;
 
         default:
-            console.log("Unknown item effect");
+            console.log("Unknown item effect:", effect.type);
     }
 }
 
@@ -231,10 +237,13 @@ function useItem(itemId) {
 
 function isEventActive(event) {
 
-    const now = new Date().toISOString().split("T")[0];
+    const now = new Date();
+    const start = new Date(event.startDate);
+    const end = new Date(event.endDate);
 
-    return now >= event.startDate && now <= event.endDate;
+    return now >= start && now <= end;
 }
+
 
 function getActiveEvents() {
     return eventDatabase.filter(isEventActive);
@@ -242,11 +251,11 @@ function getActiveEvents() {
 
 
 /* =========================================================
-   AUTO EVENT REFRESH (placeholder hook)
+   EVENT REFRESH HOOK
 ========================================================= */
 
 function refreshEvents() {
-    console.log("Events refreshed:", getActiveEvents());
+    console.log("Active events:", getActiveEvents());
 }
 
 
