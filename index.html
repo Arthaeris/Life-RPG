@@ -6,6 +6,7 @@
 <title>Quest Chronicles</title>
 
 <style>
+
 /* =========================================================
    THEME SYSTEM
 ========================================================= */
@@ -54,7 +55,7 @@ body {
 }
 
 /* =========================================================
-   PANEL SYSTEM (ART READY)
+   PANEL SYSTEM
 ========================================================= */
 
 .panel {
@@ -67,7 +68,6 @@ body {
     overflow: hidden;
 }
 
-/* optional art layer hook */
 .panel::before {
     content: "";
     position: absolute;
@@ -112,7 +112,7 @@ body {
 }
 
 /* =========================================================
-   BOTTOM NAV
+   NAV
 ========================================================= */
 
 #bottomNav {
@@ -135,7 +135,7 @@ body {
 }
 
 /* =========================================================
-   QUEST SUB TABS
+   TABS
 ========================================================= */
 
 .tabs {
@@ -197,6 +197,11 @@ body {
 <div id="app">
 
 <!-- =========================================================
+   GLOBAL EDITOR CONTAINER (editor.js injects here)
+========================================================= -->
+<div id="editorContainer"></div>
+
+<!-- =========================================================
      DASHBOARD
 ========================================================= -->
 <div id="dashboard" class="screen active">
@@ -233,22 +238,15 @@ body {
 <div id="quests" class="screen">
 
     <div class="tabs">
-        <div class="tab active" onclick="switchQuestTab('available')">Quests</div>
-        <div class="tab" onclick="switchQuestTab('daily')">Daily</div>
-        <div class="tab" onclick="switchQuestTab('events')">Events</div>
-        <div class="tab" onclick="switchQuestTab('boss')">Boss</div>
+        <div class="tab active" onclick="switchQuestTab('available', this)">Quests</div>
+        <div class="tab" onclick="switchQuestTab('daily', this)">Daily</div>
+        <div class="tab" onclick="switchQuestTab('events', this)">Events</div>
+        <div class="tab" onclick="switchQuestTab('boss', this)">Boss</div>
     </div>
 
-    <!-- AVAILABLE -->
     <div id="available" class="subscreen active"></div>
-
-    <!-- DAILY -->
     <div id="daily" class="subscreen"></div>
-
-    <!-- EVENTS -->
     <div id="events" class="subscreen"></div>
-
-    <!-- BOSS -->
     <div id="boss" class="subscreen"></div>
 
 </div>
@@ -296,7 +294,7 @@ body {
 </div>
 
 <!-- =========================================================
-     SETTINGS
+     SETTINGS + EDITORS
 ========================================================= -->
 <div id="settings" class="screen">
 
@@ -304,13 +302,42 @@ body {
         <div class="panel-content">
             <div class="title">Settings</div>
             <div class="sub">Save / Import / Export</div>
+
+            <div class="btn">Save Game</div>
+            <div class="btn">Load Game</div>
+            <div class="btn">Export Save</div>
         </div>
     </div>
 
     <div class="panel">
         <div class="panel-content">
-            <div class="title">Event Manager</div>
-            <div class="sub">Create / Edit Events (placeholder)</div>
+            <div class="title">Quest Editor</div>
+            <div class="sub">Create and manage quests</div>
+            <div class="btn primary" onclick="openEditor('quest')">+ Create Quest</div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-content">
+            <div class="title">Event Editor</div>
+            <div class="sub">Create seasonal events</div>
+            <div class="btn primary" onclick="openEditor('event')">+ Create Event</div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-content">
+            <div class="title">Boss Editor</div>
+            <div class="sub">Create bosses</div>
+            <div class="btn primary" onclick="openEditor('boss')">+ Create Boss</div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-content">
+            <div class="title">Item Editor</div>
+            <div class="sub">Create shop & inventory items</div>
+            <div class="btn primary" onclick="openEditor('item')">+ Create Item</div>
         </div>
     </div>
 
@@ -321,12 +348,12 @@ body {
 ========================================================= -->
 <div id="bottomNav">
 
-    <div class="nav-btn active" onclick="switchScreen('dashboard')">Dashboard</div>
-    <div class="nav-btn" onclick="switchScreen('quests')">Quests</div>
-    <div class="nav-btn" onclick="switchScreen('profile')">Profile</div>
-    <div class="nav-btn" onclick="switchScreen('shop')">Shop</div>
-    <div class="nav-btn" onclick="switchScreen('inventory')">Inv</div>
-    <div class="nav-btn" onclick="switchScreen('settings')">Settings</div>
+    <div class="nav-btn active" onclick="switchScreen('dashboard', this)">Dashboard</div>
+    <div class="nav-btn" onclick="switchScreen('quests', this)">Quests</div>
+    <div class="nav-btn" onclick="switchScreen('profile', this)">Profile</div>
+    <div class="nav-btn" onclick="switchScreen('shop', this)">Shop</div>
+    <div class="nav-btn" onclick="switchScreen('inventory', this)">Inv</div>
+    <div class="nav-btn" onclick="switchScreen('settings', this)">Settings</div>
 
 </div>
 
@@ -335,29 +362,37 @@ body {
 <script>
 
 /* =========================================================
-   NAVIGATION SYSTEM
+   NAVIGATION
 ========================================================= */
 
-function switchScreen(id) {
+function switchScreen(id, el) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById(id).classList.add('active');
 
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    if (el) el.classList.add('active');
 }
 
 /* =========================================================
-   QUEST TAB SYSTEM
+   QUEST TABS
 ========================================================= */
 
-function switchQuestTab(tab) {
+function switchQuestTab(tab, el) {
     document.querySelectorAll('.subscreen').forEach(s => s.classList.remove('active'));
     document.getElementById(tab).classList.add('active');
 
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    event.target.classList.add('active');
+    if (el) el.classList.add('active');
 }
 
 </script>
+
+<!-- external systems (you already have these files) -->
+<script src="database.js"></script>
+<script src="systems.js"></script>
+<script src="render.js"></script>
+<script src="save.js"></script>
+<script src="editor.js"></script>
 
 </body>
 </html>
