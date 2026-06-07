@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quest Chronicles</title>
+
+<style>
+/* =========================================================
+   THEME SYSTEM
+========================================================= */
+
+:root {
+    --bg: #0e0f14;
+    --panel: #171923;
+    --panel2: #1f2230;
+    --border: #2e3245;
+    --text: #e6e6e6;
+    --muted: #9aa0b4;
+    --accent: #7c5cff;
+}
+
+/* =========================================================
+   GLOBAL
+========================================================= */
+
+body {
+    margin: 0;
+    font-family: monospace;
+    background: var(--bg);
+    color: var(--text);
+}
+
+.hidden { display: none; }
+
+/* =========================================================
+   APP LAYOUT
+========================================================= */
+
+#app {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* =========================================================
+   SCREEN AREA
+========================================================= */
+
+#screen {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+}
+
+/* =========================================================
+   PANEL SYSTEM (ART READY)
+========================================================= */
+
+.panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* optional art layer hook */
+.panel::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    opacity: 0.08;
+    background-size: cover;
+    background-position: center;
+    pointer-events: none;
+}
+
+.panel-content {
+    position: relative;
+}
+
+.title {
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.sub {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+/* =========================================================
+   BUTTONS
+========================================================= */
+
+.btn {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px;
+    border-radius: 6px;
+    text-align: center;
+    cursor: pointer;
+    margin-top: 8px;
+}
+
+.btn.primary {
+    border-color: var(--accent);
+}
+
+/* =========================================================
+   BOTTOM NAV
+========================================================= */
+
+#bottomNav {
+    display: flex;
+    border-top: 1px solid var(--border);
+    background: #141622;
+}
+
+.nav-btn {
+    flex: 1;
+    text-align: center;
+    padding: 10px;
+    font-size: 12px;
+    color: var(--muted);
+    cursor: pointer;
+}
+
+.nav-btn.active {
+    color: var(--text);
+}
+
+/* =========================================================
+   QUEST SUB TABS
+========================================================= */
+
+.tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.tab {
+    flex: 1;
+    text-align: center;
+    padding: 8px;
+    font-size: 12px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    cursor: pointer;
+}
+
+.tab.active {
+    border-color: var(--accent);
+}
+
+/* =========================================================
+   QUEST CARD
+========================================================= */
+
+.quest-card {
+    border: 1px solid var(--border);
+    background: var(--panel);
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.quest-title {
+    font-weight: bold;
+}
+
+.quest-sub {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+/* =========================================================
+   LAYOUT STATES
+========================================================= */
+
+.screen { display: none; }
+.screen.active { display: block; }
+
+.subscreen { display: none; }
+.subscreen.active { display: block; }
+
+</style>
+</head>
+
+<body>
+
+<div id="app">
+
+<!-- =========================================================
+     DASHBOARD
+========================================================= -->
+<div id="dashboard" class="screen active">
+
+    <div class="panel">
+        <div class="panel-content">
+            <div class="title">Character</div>
+            <div class="sub">Name: Hero</div>
+            <div class="sub">Level: 1</div>
+            <div class="sub">XP: 0 / 100</div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-content">
+            <div class="title">Currencies</div>
+            <div class="sub">Gold: 100</div>
+            <div class="sub">Gems: 0</div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-content">
+            <div class="title">Active Quest Slot</div>
+            <div class="sub">Empty</div>
+        </div>
+    </div>
+
+</div>
+
+<!-- =========================================================
+     QUESTS
+========================================================= -->
+<div id="quests" class="screen">
+
+    <div class="tabs">
+        <div class="tab active" onclick="switchQuestTab('available')">Quests</div>
+        <div class="tab" onclick="switchQuestTab('daily')">Daily</div>
+        <div class="tab" onclick="switchQuestTab('events')">Events</div>
+        <div class="tab" onclick="switchQuestTab('boss')">Boss</div>
+    </div>
+
+    <!-- AVAILABLE -->
+    <div id="available" class="subscreen active"></div>
+
+    <!-- DAILY -->
+    <div id="daily" class="subscreen"></div>
+
+    <!-- EVENTS -->
+    <div id="events" class="subscreen"></div>
+
+    <!-- BOSS -->
+    <div id="boss" class="subscreen"></div>
+
+</div>
+
+<!-- =========================================================
+     PROFILE
+========================================================= -->
+<div id="profile" class="screen">
+
+    <div class="panel">
+        <div class="panel-content">
+            <div class="title">Profile</div>
+            <div class="sub">Level / XP / Stats placeholder</div>
+        </div>
+    </div>
+
+</div>
+
+<!-- =========================================================
+     SHOP
+========================================================= -->
+<div id="shop" class="screen">
+
+    <div class="panel">
+        <div class="panel-content">
+            <div class="title">Shop</div>
+            <div class="sub">Consumables / Boosts / Items</div>
+        </div>
+    </div>
+
+</div>
+
+<!-- =========================================================
+     INVENTORY
+========================================================= -->
+<div id="inventory" class="screen">
+
+    <div class="panel">
+        <div class="panel-content">
+            <div class="title">Inventory</div>
+            <div class="sub">Items go here</div>
+        </div>
+    </div>
+
+</div>
+
+<!-- =========================================================
+     SETTINGS
+========================================================= -->
+<div id="settings" class="screen">
+
+    <div class="panel">
+        <div class="panel-content">
+            <div class="title">Settings</div>
+            <div class="sub">Save / Import / Export</div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-content">
+            <div class="title">Event Manager</div>
+            <div class="sub">Create / Edit Events (placeholder)</div>
+        </div>
+    </div>
+
+</div>
+
+<!-- =========================================================
+     BOTTOM NAV
+========================================================= -->
+<div id="bottomNav">
+
+    <div class="nav-btn active" onclick="switchScreen('dashboard')">Dashboard</div>
+    <div class="nav-btn" onclick="switchScreen('quests')">Quests</div>
+    <div class="nav-btn" onclick="switchScreen('profile')">Profile</div>
+    <div class="nav-btn" onclick="switchScreen('shop')">Shop</div>
+    <div class="nav-btn" onclick="switchScreen('inventory')">Inv</div>
+    <div class="nav-btn" onclick="switchScreen('settings')">Settings</div>
+
+</div>
+
+</div>
+
+<script>
+
+/* =========================================================
+   NAVIGATION SYSTEM
+========================================================= */
+
+function switchScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+}
+
+/* =========================================================
+   QUEST TAB SYSTEM
+========================================================= */
+
+function switchQuestTab(tab) {
+    document.querySelectorAll('.subscreen').forEach(s => s.classList.remove('active'));
+    document.getElementById(tab).classList.add('active');
+
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+}
+
+</script>
+
+</body>
+</html>
