@@ -1,431 +1,459 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Quest Chronicles</title>
 
-<style>
-/* =========================================================
-   THEME SYSTEM
-========================================================= */
+<link rel="stylesheet" href="style.css">
 
-:root {
-    --bg: #0e0f14;
-    --panel: #171923;
-    --panel2: #1f2230;
-    --border: #2e3245;
-    --text: #e6e6e6;
-    --muted: #9aa0b4;
-    --accent: #7c5cff;
-}
-
-/* =========================================================
-   GLOBAL
-========================================================= */
-
-body {
-    margin: 0;
-    font-family: monospace;
-    background: var(--bg);
-    color: var(--text);
-}
-
-.hidden {
-    display: none;
-}
-
-/* =========================================================
-   APP LAYOUT
-========================================================= */
-
-#app {
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-}
-
-#screen {
-    flex: 1;
-    overflow-y: auto;
-    padding: 12px;
-}
-
-/* =========================================================
-   PANEL SYSTEM
-========================================================= */
-
-.panel {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 12px;
-    margin-bottom: 10px;
-    position: relative;
-    overflow: hidden;
-}
-
-.panel::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    opacity: 0.08;
-    background-size: cover;
-    background-position: center;
-    pointer-events: none;
-}
-
-.panel-content {
-    position: relative;
-}
-
-.title {
-    font-weight: bold;
-    font-size: 14px;
-    margin-bottom: 4px;
-}
-
-.sub {
-    font-size: 12px;
-    color: var(--muted);
-    line-height: 1.4;
-}
-
-/* =========================================================
-   BUTTONS
-========================================================= */
-
-.btn {
-    background: var(--panel2);
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 10px;
-    border-radius: 6px;
-    text-align: center;
-    cursor: pointer;
-    margin-top: 8px;
-    user-select: none;
-}
-
-.btn.primary {
-    border-color: var(--accent);
-}
-
-/* =========================================================
-   NAVIGATION
-========================================================= */
-
-#bottomNav {
-    display: flex;
-    border-top: 1px solid var(--border);
-    background: #141622;
-}
-
-.nav-btn {
-    flex: 1;
-    text-align: center;
-    padding: 10px 4px;
-    font-size: 12px;
-    color: var(--muted);
-    cursor: pointer;
-    user-select: none;
-}
-
-.nav-btn.active {
-    color: var(--text);
-}
-
-/* =========================================================
-   TABS
-========================================================= */
-
-.tabs {
-    display: flex;
-    gap: 6px;
-    margin-bottom: 10px;
-}
-
-.tab {
-    flex: 1;
-    text-align: center;
-    padding: 8px;
-    font-size: 12px;
-    border: 1px solid var(--border);
-    background: var(--panel);
-    cursor: pointer;
-    border-radius: 6px;
-    user-select: none;
-}
-
-.tab.active {
-    border-color: var(--accent);
-}
-
-/* =========================================================
-   QUEST CARDS
-========================================================= */
-
-.quest-card {
-    border: 1px solid var(--border);
-    background: var(--panel);
-    padding: 10px;
-    border-radius: 8px;
-    margin-bottom: 10px;
-}
-
-.quest-title {
-    font-weight: bold;
-    margin-bottom: 4px;
-}
-
-.quest-sub {
-    font-size: 12px;
-    color: var(--muted);
-    margin-bottom: 4px;
-}
-
-/* =========================================================
-   FORMS
-========================================================= */
-
-input,
-textarea,
-select {
-    box-sizing: border-box;
-    background: var(--panel2);
-    border: 1px solid var(--border);
-    color: var(--text);
-    border-radius: 6px;
-    font-family: monospace;
-}
-
-/* =========================================================
-   LAYOUT STATES
-========================================================= */
-
-.screen {
-    display: none;
-}
-
-.screen.active {
-    display: block;
-}
-
-.subscreen {
-    display: none;
-}
-
-.subscreen.active {
-    display: block;
-}
-</style>
 </head>
-
 <body>
 
 <div id="app">
 
-<main id="screen">
+    <!-- =====================================================
+         MAIN CONTENT
+    ====================================================== -->
+    <main id="screen">
 
-<!-- =========================================================
-     DASHBOARD
-========================================================= -->
-<div id="dashboard" class="screen active">
+        <!-- =================================================
+             DASHBOARD
+        ================================================== -->
+        <section
+            id="dashboard"
+            class="screen active">
+        </section>
 
-    <div class="panel">
-        <div class="panel-content">
-            <div class="title">Dashboard</div>
-            <div class="sub">Loading character data...</div>
-        </div>
-    </div>
+        <!-- =================================================
+             QUESTS
+        ================================================== -->
+        <section
+            id="quests"
+            class="screen">
 
-</div>
+            <div class="tabs">
 
-<!-- =========================================================
-     QUESTS
-========================================================= -->
-<div id="quests" class="screen">
+                <div
+                    class="tab active"
+                    onclick="switchQuestTab('available', this)">
+                    Normal
+                </div>
 
-    <div class="tabs">
-        <div class="tab active" onclick="switchQuestTab('available', this)">Quests</div>
-        <div class="tab" onclick="switchQuestTab('daily', this)">Daily</div>
-        <div class="tab" onclick="switchQuestTab('events', this)">Events</div>
-        <div class="tab" onclick="switchQuestTab('boss', this)">Boss</div>
-    </div>
+                <div
+                    class="tab"
+                    onclick="switchQuestTab('daily', this)">
+                    Daily
+                </div>
 
-    <div id="available" class="subscreen active"></div>
-    <div id="daily" class="subscreen"></div>
-    <div id="events" class="subscreen"></div>
-    <div id="boss" class="subscreen"></div>
+                <div
+                    class="tab"
+                    onclick="switchQuestTab('events', this)">
+                    Events
+                </div>
 
-</div>
+                <div
+                    class="tab"
+                    onclick="switchQuestTab('boss', this)">
+                    Boss Campaign
+                </div>
 
-<!-- =========================================================
-     PROFILE
-========================================================= -->
-<div id="profile" class="screen">
+            </div>
 
-    <div class="panel">
-        <div class="panel-content">
-            <div class="title">Profile</div>
-            <div class="sub">Character statistics and achievements will go here.</div>
-        </div>
-    </div>
+            <div
+                id="available"
+                class="subscreen active">
+            </div>
 
-</div>
+            <div
+                id="daily"
+                class="subscreen">
+            </div>
 
-<!-- =========================================================
-     SHOP
-========================================================= -->
-<div id="shop" class="screen">
+            <div
+                id="events"
+                class="subscreen">
+            </div>
 
-    <div class="panel">
-        <div class="panel-content">
-            <div class="title">Shop</div>
-            <div class="sub">Consumables, boosts, utility items, prestige items and titles will go here.</div>
-        </div>
-    </div>
+            <div
+                id="boss"
+                class="subscreen">
+            </div>
 
-</div>
+        </section>
 
-<!-- =========================================================
-     INVENTORY
-========================================================= -->
-<div id="inventory" class="screen">
+        <!-- =================================================
+             PROFILE
+        ================================================== -->
+        <section
+            id="profile"
+            class="screen">
+        </section>
 
-    <div class="panel">
-        <div class="panel-content">
-            <div class="title">Inventory</div>
-            <div class="sub">Owned items will go here.</div>
-        </div>
-    </div>
+        <!-- =================================================
+             SHOP
+        ================================================== -->
+        <section
+            id="shop"
+            class="screen">
+        </section>
 
-</div>
+        <!-- =================================================
+             INVENTORY
+        ================================================== -->
+        <section
+            id="inventory"
+            class="screen">
+        </section>
 
-<!-- =========================================================
-     SETTINGS
-========================================================= -->
-<div id="settings" class="screen">
+        <!-- =================================================
+             SETTINGS
+        ================================================== -->
+        <section
+            id="settings"
+            class="screen">
 
-    <div class="panel">
-        <div class="panel-content">
-            <div class="title">Save Manager</div>
-            <div class="sub">Save, load, export, import or reset progress.</div>
+            <!-- =============================================
+                 SAVE MANAGER
+            ============================================== -->
+            <div class="panel">
 
-            <div class="btn primary" onclick="manualSave()">Save Game</div>
-            <div class="btn" onclick="loadGame()">Load Game</div>
-            <div class="btn" onclick="exportSave()">Export Save</div>
+                <div class="panel-content">
 
-            <input type="file" accept=".json,application/json" onchange="importSave(this.files[0])" style="width:100%;padding:8px;margin-top:8px;">
+                    <div class="title">
+                        Save Manager
+                    </div>
 
-            <div class="btn" onclick="resetGame()">Reset Game</div>
-        </div>
-    </div>
+                    <div class="sub">
+                        Save, load, export and import progress.
+                    </div>
 
-    <div class="panel">
-        <div class="panel-content">
-            <div class="title">Quest Editor</div>
-            <div class="sub">Create, edit and delete quests.</div>
-            <div class="btn primary" onclick="openEditor('quest')">Open Quest Editor</div>
-        </div>
-    </div>
+                    <div
+                        class="btn primary"
+                        onclick="manualSave()">
+                        Save Game
+                    </div>
 
-    <div class="panel">
-        <div class="panel-content">
-            <div class="title">Event Editor</div>
-            <div class="sub">Create seasonal events with start and end dates.</div>
-            <div class="btn primary" onclick="openEditor('event')">Open Event Editor</div>
-        </div>
-    </div>
+                    <div
+                        class="btn"
+                        onclick="loadGame(); if(window.renderAll) renderAll();">
+                        Load Game
+                    </div>
 
-    <div class="panel">
-        <div class="panel-content">
-            <div class="title">Boss Editor</div>
-            <div class="sub">Create bosses, rewards, weaknesses and regeneration.</div>
-            <div class="btn primary" onclick="openEditor('boss')">Open Boss Editor</div>
-        </div>
-    </div>
+                    <div
+                        class="btn"
+                        onclick="exportSave()">
+                        Export Save
+                    </div>
 
-    <div class="panel">
-        <div class="panel-content">
-            <div class="title">Item Editor</div>
-            <div class="sub">Create shop and inventory items.</div>
-            <div class="btn primary" onclick="openEditor('item')">Open Item Editor</div>
-        </div>
-    </div>
+                    <input
+                        type="file"
+                        accept=".json,application/json"
+                        onchange="importSave(this.files[0])"
+                        style="
+                            width:100%;
+                            margin-top:8px;
+                            padding:8px;
+                        "
+                    >
+
+                    <div
+                        class="btn"
+                        onclick="resetGame()">
+                        Reset Game
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- =============================================
+                 QUEST EDITOR
+            ============================================== -->
+            <div class="panel">
+
+                <div class="panel-content">
+
+                    <div class="title">
+                        Quest Editor
+                    </div>
+
+                    <div class="sub">
+                        Create and manage quests.
+                    </div>
+
+                    <div
+                        class="btn primary"
+                        onclick="openEditor('quest')">
+                        Open Quest Editor
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- =============================================
+                 EVENT EDITOR
+            ============================================== -->
+            <div class="panel">
+
+                <div class="panel-content">
+
+                    <div class="title">
+                        Event Editor
+                    </div>
+
+                    <div class="sub">
+                        Create and manage events.
+                    </div>
+
+                    <div
+                        class="btn primary"
+                        onclick="openEditor('event')">
+                        Open Event Editor
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- =============================================
+                 BOSS EDITOR
+            ============================================== -->
+            <div class="panel">
+
+                <div class="panel-content">
+
+                    <div class="title">
+                        Boss Editor
+                    </div>
+
+                    <div class="sub">
+                        Create campaign bosses.
+                    </div>
+
+                    <div
+                        class="btn primary"
+                        onclick="openEditor('boss')">
+                        Open Boss Editor
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- =============================================
+                 RELIC EDITOR
+            ============================================== -->
+            <div class="panel">
+
+                <div class="panel-content">
+
+                    <div class="title">
+                        Relic Editor
+                    </div>
+
+                    <div class="sub">
+                        Create relic rewards and bonuses.
+                    </div>
+
+                    <div
+                        class="btn primary"
+                        onclick="openEditor('relic')">
+                        Open Relic Editor
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- =============================================
+                 ITEM EDITOR
+            ============================================== -->
+            <div class="panel">
+
+                <div class="panel-content">
+
+                    <div class="title">
+                        Item Editor
+                    </div>
+
+                    <div class="sub">
+                        Create items and effects.
+                    </div>
+
+                    <div
+                        class="btn primary"
+                        onclick="openEditor('item')">
+                        Open Item Editor
+                    </div>
+
+                </div>
+
+            </div>
+						
+						
+						
+						            <!-- =============================================
+                 BACKGROUND EDITOR
+            ============================================== -->
+            <div class="panel">
+
+                <div class="panel-content">
+
+                    <div class="title">
+                        Background Editor
+                    </div>
+
+                    <div class="sub">
+                        Set screen backgrounds, quest panel backgrounds and placeholder artwork paths.
+                    </div>
+
+                    <div
+                        class="btn primary"
+                        onclick="openEditor('ui')">
+                        Open Background Editor
+                    </div>
+
+                </div>
+
+            </div>
+						
+						
+						
+
+            <!-- =============================================
+                 EDITOR OUTPUT
+            ============================================== -->
+            <div id="editorContainer"></div>
+
+        </section>
+
+    </main>
 
     <!-- =====================================================
-         EDITOR OUTPUT
+         BOTTOM NAVIGATION
     ====================================================== -->
-    <div id="editorContainer"></div>
+    <nav id="bottomNav">
+
+        <div
+            class="nav-btn active"
+            onclick="switchScreen('dashboard', this)">
+            Dashboard
+        </div>
+
+        <div
+            class="nav-btn"
+            onclick="switchScreen('quests', this)">
+            Quests
+        </div>
+
+        <div
+            class="nav-btn"
+            onclick="switchScreen('profile', this)">
+            Profile
+        </div>
+
+        <div
+            class="nav-btn"
+            onclick="switchScreen('shop', this)">
+            Shop
+        </div>
+
+        <div
+            class="nav-btn"
+            onclick="switchScreen('inventory', this)">
+            Inventory
+        </div>
+
+        <div
+            class="nav-btn"
+            onclick="switchScreen('settings', this)">
+            Settings
+        </div>
+
+    </nav>
 
 </div>
 
-</main>
 
 <!-- =========================================================
-     BOTTOM NAVIGATION
+     UI NAVIGATION
 ========================================================= -->
-<nav id="bottomNav">
-
-    <div class="nav-btn active" onclick="switchScreen('dashboard', this)">Dashboard</div>
-    <div class="nav-btn" onclick="switchScreen('quests', this)">Quests</div>
-    <div class="nav-btn" onclick="switchScreen('profile', this)">Profile</div>
-    <div class="nav-btn" onclick="switchScreen('shop', this)">Shop</div>
-    <div class="nav-btn" onclick="switchScreen('inventory', this)">Inv</div>
-    <div class="nav-btn" onclick="switchScreen('settings', this)">Settings</div>
-
-</nav>
-
-</div>
-
 <script>
-/* =========================================================
-   SCREEN NAVIGATION
-========================================================= */
 
-function switchScreen(id, el) {
+function switchScreen(id, element) {
 
-    document.querySelectorAll(".screen").forEach(screen => {
-        screen.classList.remove("active");
-    });
+    document
+        .querySelectorAll(".screen")
+        .forEach(screen =>
+            screen.classList.remove("active")
+        );
 
-    const target = document.getElementById(id);
-    if (target) target.classList.add("active");
+    const target =
+        document.getElementById(id);
 
-    document.querySelectorAll(".nav-btn").forEach(btn => {
-        btn.classList.remove("active");
-    });
+    if (target) {
+        target.classList.add("active");
+    }
 
-    if (el) el.classList.add("active");
+    document
+        .querySelectorAll(".nav-btn")
+        .forEach(btn =>
+            btn.classList.remove("active")
+        );
+
+    if (element) {
+        element.classList.add("active");
+    }
 }
 
+function switchQuestTab(id, element) {
 
-/* =========================================================
-   QUEST SUBTAB NAVIGATION
-========================================================= */
+    document
+        .querySelectorAll(".subscreen")
+        .forEach(screen =>
+            screen.classList.remove("active")
+        );
 
-function switchQuestTab(id, el) {
+    const target =
+        document.getElementById(id);
 
-    document.querySelectorAll(".subscreen").forEach(screen => {
-        screen.classList.remove("active");
-    });
+    if (target) {
+        target.classList.add("active");
+    }
 
-    const target = document.getElementById(id);
-    if (target) target.classList.add("active");
+    document
+        .querySelectorAll("#quests .tab")
+        .forEach(tab =>
+            tab.classList.remove("active")
+        );
 
-    document.querySelectorAll(".tab").forEach(tab => {
-        tab.classList.remove("active");
-    });
-
-    if (el) el.classList.add("active");
+    if (element) {
+        element.classList.add("active");
+    }
 }
+
+window.addEventListener("load", () => {
+
+    const dashboardButton =
+        document.querySelector(".nav-btn");
+
+    switchScreen(
+        "dashboard",
+        dashboardButton
+    );
+});
+
 </script>
 
+
 <!-- =========================================================
-     SCRIPT LOAD ORDER
-     database → systems → render → save → editor
+     LOAD ORDER
 ========================================================= -->
+
 <script src="database.js"></script>
 <script src="systems.js"></script>
 <script src="render.js"></script>
