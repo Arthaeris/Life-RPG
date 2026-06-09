@@ -1,6 +1,10 @@
 /* =========================================================
-   QUEST CHRONICLES - SAVE SYSTEM v1.3
-   Fits database.js v1.2 + systems.js v2.2 + render.js v1.2 + editor.js v0.4
+   QUEST CHRONICLES - SAVE SYSTEM v4.0
+   Compatible with:
+   - database.js v3.x
+   - systems.js v4.1+
+   - render.js v4.1+
+   - editor.js v3.x
 ========================================================= */
 
 
@@ -8,39 +12,80 @@
    SAVE CONFIG
 ========================================================= */
 
-const SAVE_KEY = "quest_chronicles_save_v1";
-const SAVE_VERSION = 1;
+const SAVE_KEY = "quest_chronicles_save_v4";
+const SAVE_VERSION = 4;
+
+const LEGACY_SAVE_KEYS = [
+    "quest_chronicles_save_v3",
+    "quest_chronicles_save_v2",
+    "quest_chronicles_save_v1"
+];
 
 
 /* =========================================================
-   INITIAL LOAD
+   AUTO LOAD
 ========================================================= */
 
 window.addEventListener("load", () => {
+
     loadGame();
+
+    repairLoadedRuntimeState();
+
+    if (typeof renderAll === "function") {
+        renderAll();
+    }
 });
 
 
 /* =========================================================
-   AUTO SAVE LOOP
+   AUTO SAVE
 ========================================================= */
 
 setInterval(() => {
+
     autoSave();
-}, 5000);
+
+}, 10000);
 
 
 /* =========================================================
-   SAVE FUNCTIONS
+   SAVE HELPERS
 ========================================================= */
 
-function autoSave() {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(collectSaveData()));
+function cloneData(data) {
+
+    if (typeof structuredClone === "function") {
+        return structuredClone(data);
+    }
+
+    return JSON.parse(
+        JSON.stringify(data)
+    );
 }
 
-function manualSave() {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(collectSaveData()));
-    console.log("Game saved.");
+function getStoredSaveRaw() {
+
+    const current =
+        localStorage.getItem(
+            SAVE_KEY
+        );
+
+    if (current) {
+        return current;
+    }
+
+    for (const key of LEGACY_SAVE_KEYS) {
+
+        const legacy =
+            localStorage.getItem(key);
+
+        if (legacy) {
+            return legacy;
+        }
+    }
+
+    return null;
 }
 
 
@@ -51,76 +96,309 @@ function manualSave() {
 function collectSaveData() {
 
     return {
+
         version: SAVE_VERSION,
+
         timestamp: Date.now(),
 
-        playerData: cloneData(playerData),
+        playerData:
+            cloneData(playerData),
 
-        questDatabase: cloneData(questDatabase),
-        eventDatabase: cloneData(eventDatabase),
-        bossDatabase: cloneData(bossDatabase),
-        itemDatabase: cloneData(itemDatabase)
+        questBoardState:
+            cloneData(questBoardState),
+
+        bossChallengeState:
+            cloneData(bossChallengeState),
+
+        bossProgression:
+            cloneData(bossProgression),
+
+        relicLoadout:
+            cloneData(relicLoadout),
+
+        activeEffects:
+            cloneData(activeEffects),
+
+        questDatabase:
+            cloneData(questDatabase),
+
+        eventDatabase:
+            cloneData(eventDatabase),
+
+        bossDatabase:
+            cloneData(bossDatabase),
+
+        itemDatabase:
+            cloneData(itemDatabase),
+
+        relicDatabase:
+            cloneData(relicDatabase)
     };
 }
 
 
 /* =========================================================
-   LOAD GAME
+   SAVE
 ========================================================= */
 
-function loadGame() {
-
-    const raw = localStorage.getItem(SAVE_KEY);
-    if (!raw) {
-        console.log("No save found.");
-        return;
-    }
+function autoSave() {
 
     try {
-        const data = JSON.parse(raw);
-        applySaveData(data);
-        console.log("Save loaded.");
-    } catch (err) {
-        console.error("Save load failed:", err);
+
+        localStorage.setItem(
+            SAVE_KEY,
+            JSON.stringify(
+                collectSaveData()
+            )
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Auto save failed:",
+            error
+        );
+    }
+}
+
+function manualSave() {
+
+    try {
+
+        localStorage.setItem(
+            SAVE_KEY,
+            JSON.stringify(
+                collectSaveData()
+            )
+        );
+
+        console.log(
+            "Game saved."
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Manual save failed:",
+            error
+        );
     }
 }
 
 
 /* =========================================================
-   APPLY SAVE DATA
+   LOAD
+========================================================= */
+
+function loadGame() {
+
+    const raw =
+        getStoredSaveRaw();
+
+    if (!raw) {
+
+        console.log(
+            "No save found."
+        );
+
+        return false;
+    }
+
+    try {
+
+        const saveData =
+            JSON.parse(raw);
+
+        applySaveData(
+            saveData
+        );
+
+        console.log(
+            "Save loaded."
+        );
+
+        return true;
+
+    } catch (error) {
+
+        console.error(
+            "Failed to load save:",
+            error
+        );
+
+        return false;
+    }
+}
+
+
+/* =========================================================
+   APPLY SAVE
 ========================================================= */
 
 function applySaveData(data) {
 
-    if (!data || !data.playerData) return;
+    if (!data) return;
 
-    if (data.version !== SAVE_VERSION) {
-        console.warn("Save version mismatch. Attempting load anyway.");
+    if (
+        data.version !== SAVE_VERSION
+    ) {
+
+        console.warn(
+            "Save version mismatch. Attempting compatibility load."
+        );
     }
 
-    Object.assign(playerData, data.playerData);
+    if (data.playerData) {
 
-    rebuildArray(questDatabase, data.questDatabase);
-    rebuildArray(eventDatabase, data.eventDatabase);
-    rebuildArray(bossDatabase, data.bossDatabase);
-    rebuildArray(itemDatabase, data.itemDatabase);
+        Object.assign(
+            playerData,
+            data.playerData
+        );
+    }
 
-    if (typeof renderAll === "function") {
+    if (data.questBoardState) {
+
+        Object.assign(
+            questBoardState,
+            data.questBoardState
+        );
+    }
+
+    if (data.bossChallengeState) {
+
+        Object.assign(
+            bossChallengeState,
+            data.bossChallengeState
+        );
+    }
+
+    if (data.bossProgression) {
+
+        Object.assign(
+            bossProgression,
+            data.bossProgression
+        );
+    }
+
+    if (data.relicLoadout) {
+
+        Object.assign(
+            relicLoadout,
+            data.relicLoadout
+        );
+    }
+
+    replaceArray(
+        activeEffects,
+        data.activeEffects
+    );
+
+    replaceArray(
+        questDatabase,
+        data.questDatabase
+    );
+
+    replaceArray(
+        eventDatabase,
+        data.eventDatabase
+    );
+
+    replaceArray(
+        bossDatabase,
+        data.bossDatabase
+    );
+
+    replaceArray(
+        itemDatabase,
+        data.itemDatabase
+    );
+
+    replaceArray(
+        relicDatabase,
+        data.relicDatabase
+    );
+
+    repairLoadedRuntimeState();
+
+    if (
+        typeof renderAll ===
+        "function"
+    ) {
+
         renderAll();
     }
 }
 
 
 /* =========================================================
-   ARRAY REBUILD HELPER
+   RUNTIME REPAIR AFTER LOAD
 ========================================================= */
 
-function rebuildArray(target, source) {
+function repairLoadedRuntimeState() {
 
-    if (!Array.isArray(target) || !Array.isArray(source)) return;
+    if (
+        typeof ensureRuntimeState ===
+        "function"
+    ) {
+        ensureRuntimeState();
+    }
+
+    if (
+        typeof updateBossUnlocks ===
+        "function"
+    ) {
+        updateBossUnlocks();
+    }
+
+    if (
+        typeof normalizeQuestBoards ===
+        "function"
+    ) {
+        normalizeQuestBoards();
+    }
+
+    if (
+        typeof processQuestBoard ===
+        "function"
+    ) {
+        processQuestBoard();
+    }
+
+    if (
+        typeof generateQuestBoard === "function" &&
+        (
+            !questBoardState.normalSlots?.length ||
+            !questBoardState.dailySlots?.length
+        )
+    ) {
+        generateQuestBoard();
+    }
+}
+
+
+/* =========================================================
+   ARRAY REPLACEMENT
+========================================================= */
+
+function replaceArray(
+    target,
+    source
+) {
+
+    if (
+        !Array.isArray(target) ||
+        !Array.isArray(source)
+    ) {
+        return;
+    }
 
     target.length = 0;
-    target.push(...source);
+
+    source.forEach(item => {
+
+        target.push(item);
+
+    });
 }
 
 
@@ -130,23 +408,48 @@ function rebuildArray(target, source) {
 
 function exportSave() {
 
-    const data = collectSaveData();
+    const data =
+        collectSaveData();
 
-    const blob = new Blob(
-        [JSON.stringify(data, null, 2)],
-        { type: "application/json" }
+    const blob =
+        new Blob(
+            [
+                JSON.stringify(
+                    data,
+                    null,
+                    2
+                )
+            ],
+            {
+                type:
+                    "application/json"
+            }
+        );
+
+    const url =
+        URL.createObjectURL(
+            blob
+        );
+
+    const link =
+        document.createElement(
+            "a"
+        );
+
+    link.href = url;
+
+    link.download =
+        "quest_chronicles_save.json";
+
+    link.click();
+
+    URL.revokeObjectURL(
+        url
     );
 
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "quest_chronicles_save.json";
-    a.click();
-
-    URL.revokeObjectURL(url);
-
-    console.log("Save exported.");
+    console.log(
+        "Save exported."
+    );
 }
 
 
@@ -158,48 +461,89 @@ function importSave(file) {
 
     if (!file) return;
 
-    const reader = new FileReader();
+    const reader =
+        new FileReader();
 
-    reader.onload = function (e) {
-        try {
-            const data = JSON.parse(e.target.result);
-            applySaveData(data);
-            manualSave();
-            console.log("Save imported.");
-        } catch (err) {
-            console.error("Invalid save file:", err);
-        }
-    };
+    reader.onload =
+        function(event) {
+
+            try {
+
+                const data =
+                    JSON.parse(
+                        event.target.result
+                    );
+
+                applySaveData(
+                    data
+                );
+
+                manualSave();
+
+                console.log(
+                    "Save imported."
+                );
+
+            } catch (error) {
+
+                console.error(
+                    "Invalid save file:",
+                    error
+                );
+            }
+        };
 
     reader.readAsText(file);
 }
 
 
+
 /* =========================================================
-   RESET SAVE
+   RESET GAME
 ========================================================= */
 
 function resetGame() {
 
-    const confirmed = confirm("Reset all progress? This cannot be undone.");
-    if (!confirmed) return;
+    const confirmed =
+        confirm(
+            "Delete all progress?"
+        );
 
-    localStorage.removeItem(SAVE_KEY);
+    if (!confirmed)
+        return;
 
-    console.log("Save reset. Reloading...");
+    localStorage.removeItem(
+        SAVE_KEY
+    );
+
+    LEGACY_SAVE_KEYS.forEach(key => {
+        localStorage.removeItem(key);
+    });
+
     location.reload();
 }
 
 
 /* =========================================================
-   CLONE HELPER
+   DEBUG
 ========================================================= */
 
-function cloneData(data) {
+function clearSaveData() {
 
-    if (typeof structuredClone === "function") {
-        return structuredClone(data);
-    }
+    localStorage.removeItem(
+        SAVE_KEY
+    );
 
-    return JSON.parse(JSON.stringify(data));
+    LEGACY_SAVE_KEYS.forEach(key => {
+        localStorage.removeItem(key);
+    });
+
+    console.log(
+        "Save removed."
+    );
+}
+
+function downloadSaveBackup() {
+
+    exportSave();
 }
