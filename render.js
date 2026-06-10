@@ -1,10 +1,11 @@
 /* =========================================================
-   QUEST CHRONICLES - RENDER SYSTEM v4.2
+   QUEST CHRONICLES - RENDER SYSTEM v4.3
    Artwork-Aware UI Layer
    Compatible with:
-   - database.js v3.1+
-   - systems.js v4.x+
-   - save.js v4.x+
+   - database.js v3.x
+   - systems.js v4.x
+   - save.js v3.x+
+   - editor.js v3.x+
 ========================================================= */
 
 window.addEventListener("load", () => {
@@ -55,14 +56,21 @@ function escapeAttr(value) {
     return escapeHTML(value);
 }
 
+function cleanAssetPath(path) {
+
+    return String(path || "")
+        .trim()
+        .replaceAll("\\", "/");
+}
+
 function getArtworkPath(entity, fallbackType = null) {
 
     if (entity?.artwork) {
-        return entity.artwork;
+        return cleanAssetPath(entity.artwork);
     }
 
     if (entity?.icon) {
-        return entity.icon;
+        return cleanAssetPath(entity.icon);
     }
 
     if (
@@ -70,7 +78,7 @@ function getArtworkPath(entity, fallbackType = null) {
         typeof UI_CONFIG !== "undefined" &&
         UI_CONFIG.placeholders?.[fallbackType]
     ) {
-        return UI_CONFIG.placeholders[fallbackType];
+        return cleanAssetPath(UI_CONFIG.placeholders[fallbackType]);
     }
 
     return "";
@@ -78,11 +86,13 @@ function getArtworkPath(entity, fallbackType = null) {
 
 function artworkStyle(path) {
 
-    if (!path) return "";
+    const cleanPath =
+        cleanAssetPath(path);
+
+    if (!cleanPath) return "";
 
     const safePath =
-        String(path)
-            .replaceAll("\\", "/")
+        cleanPath
             .replaceAll("'", "\\'")
             .replaceAll('"', '\\"');
 
@@ -91,11 +101,13 @@ function artworkStyle(path) {
 
 function screenArtworkStyle(path) {
 
-    if (!path) return "";
+    const cleanPath =
+        cleanAssetPath(path);
+
+    if (!cleanPath) return "";
 
     const safePath =
-        String(path)
-            .replaceAll("\\", "/")
+        cleanPath
             .replaceAll("'", "\\'")
             .replaceAll('"', '\\"');
 
@@ -104,7 +116,10 @@ function screenArtworkStyle(path) {
 
 function iconImageHTML(path, label, type = "item") {
 
-    if (!path) {
+    const cleanPath =
+        cleanAssetPath(path);
+
+    if (!cleanPath) {
 
         return `
             <div class="icon-art icon-placeholder ${type}-icon-placeholder">
@@ -116,7 +131,7 @@ function iconImageHTML(path, label, type = "item") {
     return `
         <img
             class="icon-art ${type}-icon"
-            src="${escapeAttr(path)}"
+            src="${escapeAttr(cleanPath)}"
             alt="${escapeAttr(label)}"
             loading="lazy"
         >
@@ -214,6 +229,15 @@ function getStatIcon(stat) {
     }
 }
 
+function getArrayValue(value) {
+
+    if (Array.isArray(value)) {
+        return value;
+    }
+
+    return [];
+}
+
 
 /* =========================================================
    SCREEN BACKGROUNDS
@@ -245,13 +269,18 @@ function applyScreenBackgrounds() {
         if (!el) return;
 
         if (path) {
+
             el.classList.add("screen-artwork");
+
             el.setAttribute(
                 "style",
                 screenArtworkStyle(path)
             );
+
         } else {
+
             el.classList.remove("screen-artwork");
+
             el.removeAttribute("style");
         }
     });
@@ -272,12 +301,12 @@ function getQuestSlotStatus(slot) {
 
     if (!slot) return "empty";
 
-    const time =
+    const now =
         Date.now();
 
     if (
         slot.cooldownUntil &&
-        time < slot.cooldownUntil
+        now < slot.cooldownUntil
     ) {
         return "cooldown";
     }
@@ -300,7 +329,7 @@ function getQuestSlotStatus(slot) {
 
     if (
         slot.expiresAt &&
-        time >= slot.expiresAt
+        now >= slot.expiresAt
     ) {
         return "expired";
     }
@@ -321,13 +350,13 @@ function getQuestSlotTime(slot) {
     const status =
         getQuestSlotStatus(slot);
 
-    const time =
+    const now =
         Date.now();
 
     if (status === "cooldown") {
         return Math.max(
             0,
-            (slot.cooldownUntil || time) - time
+            (slot.cooldownUntil || now) - now
         );
     }
 
@@ -337,7 +366,7 @@ function getQuestSlotTime(slot) {
     ) {
         return Math.max(
             0,
-            (slot.expiresAt || time) - time
+            (slot.expiresAt || now) - now
         );
     }
 
@@ -390,7 +419,7 @@ function getQuestSlots(type) {
     return [];
 }
 
-function getFallbackQuestCards(type) {
+function getFallbackQuestSlots(type) {
 
     return questDatabase
         .filter(quest => quest.type === type)
@@ -420,7 +449,7 @@ function renderDashboard() {
         playerData.activeQuest;
 
     const activeBoss =
-        bossChallengeState.active && bossChallengeState.currentBossId
+        bossChallengeState?.active && bossChallengeState?.currentBossId
             ? findBossById(bossChallengeState.currentBossId)
             : null;
 
@@ -431,13 +460,19 @@ function renderDashboard() {
         );
 
     const pendingRewards =
-        bossChallengeState.pendingRewards || {
+        bossChallengeState?.pendingRewards || {
             xp: 0,
             gold: 0,
             gems: 0,
             items: [],
             relics: []
         };
+
+    const activeQuestArtwork =
+        getArtworkPath(activeQuest, "quest");
+
+    const activeBossArtwork =
+        getArtworkPath(activeBoss, "boss");
 
     el.innerHTML = `
 
@@ -449,7 +484,7 @@ function renderDashboard() {
                 </div>
 
                 <div class="sub">
-                    ${escapeHTML(playerData.title)}
+                    ${escapeHTML(playerData.title || "Adventurer")}
                 </div>
 
                 <div class="sub">
@@ -483,10 +518,9 @@ function renderDashboard() {
             </div>
         </div>
 
-        <div class="panel ${
-            activeQuest?.artwork ? "artwork-card quest-artwork-card" : ""
-        }"
-        ${artworkStyle(getArtworkPath(activeQuest, "quest"))}>
+        <div
+            class="panel ${activeQuestArtwork ? "artwork-card quest-artwork-card" : ""}"
+            ${artworkStyle(activeQuestArtwork)}>
 
             <div class="panel-content">
 
@@ -505,13 +539,15 @@ function renderDashboard() {
                                 ${escapeHTML(activeQuest.description || "")}
                             </div>
 
-                            <div class="btn primary"
-                                 onclick="handleCompleteQuest('${escapeAttr(activeQuest.id)}')">
+                            <div
+                                class="btn primary"
+                                onclick="handleCompleteQuest('${escapeAttr(activeQuest.id)}')">
                                 Complete Quest
                             </div>
 
-                            <div class="btn"
-                                 onclick="handleAbandonQuest()">
+                            <div
+                                class="btn"
+                                onclick="handleAbandonQuest()">
                                 Abandon Quest
                             </div>
                         `
@@ -535,7 +571,7 @@ function renderDashboard() {
                 <div class="sub">
                     XP Gain:
                     ${
-                        bossChallengeState.xpLocked
+                        bossChallengeState?.xpLocked
                             ? "Locked during Boss Challenge"
                             : "Active"
                     }
@@ -544,17 +580,17 @@ function renderDashboard() {
                 <div class="sub">
                     Gold Gain:
                     ${
-                        bossChallengeState.goldLocked
+                        bossChallengeState?.goldLocked
                             ? "Locked during Boss Challenge"
                             : "Active"
                     }
                 </div>
 
                 ${
-                    bossChallengeState.active
+                    bossChallengeState?.active
                         ? `
                             <div class="sub warning">
-                                Boss Challenge active. Quest slots refresh only after quest completion.
+                                Boss Challenge active. Complete quests to damage the boss.
                             </div>
 
                             <div class="sub">
@@ -579,8 +615,9 @@ function renderDashboard() {
         ${
             activeBoss
                 ? `
-                    <div class="panel artwork-card boss-artwork-card"
-                         ${artworkStyle(getArtworkPath(activeBoss, "boss"))}>
+                    <div
+                        class="panel ${activeBossArtwork ? "artwork-card boss-artwork-card" : ""}"
+                        ${artworkStyle(activeBossArtwork)}>
 
                         <div class="panel-content">
 
@@ -681,8 +718,9 @@ function questSlotCard(slot) {
     if (status === "cooldown") {
 
         return `
-            <div class="quest-card cooldown ${artwork ? "artwork-card quest-artwork-card" : ""} rarity-${rarity}"
-                 ${artworkStyle(artwork)}>
+            <div
+                class="quest-card cooldown ${artwork ? "artwork-card quest-artwork-card" : ""} rarity-${rarity}"
+                ${artworkStyle(artwork)}>
 
                 <div class="quest-title">
                     Quest Slot Cooling Down
@@ -707,7 +745,7 @@ function questSlotCard(slot) {
     }
 
     const timerText =
-        bossChallengeState.active
+        bossChallengeState?.active
             ? `
                 <div class="quest-sub warning">
                     Boss Challenge: this slot will not refresh by timer.
@@ -758,8 +796,9 @@ function questSlotCard(slot) {
     }
 
     return `
-        <div class="quest-card ${accepted ? "accepted" : ""} ${artwork ? "artwork-card quest-artwork-card" : ""} rarity-${rarity}"
-             ${artworkStyle(artwork)}>
+        <div
+            class="quest-card ${accepted ? "accepted" : ""} ${artwork ? "artwork-card quest-artwork-card" : ""} rarity-${rarity}"
+            ${artworkStyle(artwork)}>
 
             <div class="quest-title">
                 ${escapeHTML(quest.name)}
@@ -779,7 +818,7 @@ function questSlotCard(slot) {
 
             <div class="quest-sub">
                 Tags:
-                ${(quest.tags || []).map(escapeHTML).join(", ")}
+                ${getArrayValue(quest.tags).map(escapeHTML).join(", ")}
             </div>
 
             <div class="reward-row">
@@ -810,11 +849,15 @@ function questSlotCard(slot) {
 
 function questBoardPanel(title, description, slots, artworkPath = "") {
 
+    const artwork =
+        cleanAssetPath(artworkPath);
+
     if (!slots || !slots.length) {
 
         return `
-            <div class="panel ${artworkPath ? "artwork-card panel-artwork-card" : ""}"
-                 ${artworkStyle(artworkPath)}>
+            <div
+                class="panel ${artwork ? "artwork-card panel-artwork-card" : ""}"
+                ${artworkStyle(artwork)}>
 
                 <div class="panel-content">
 
@@ -836,8 +879,9 @@ function questBoardPanel(title, description, slots, artworkPath = "") {
     }
 
     return `
-        <div class="panel ${artworkPath ? "artwork-card panel-artwork-card" : ""}"
-             ${artworkStyle(artworkPath)}>
+        <div
+            class="panel ${artwork ? "artwork-card panel-artwork-card" : ""}"
+            ${artworkStyle(artwork)}>
 
             <div class="panel-content">
 
@@ -850,15 +894,15 @@ function questBoardPanel(title, description, slots, artworkPath = "") {
                 </div>
 
                 ${
-                    bossChallengeState.active
+                    bossChallengeState?.active
                         ? `
                             <div class="sub warning">
-                                Boss Challenge mode: no passive refresh, no cooldown after completion.
+                                Boss Challenge mode: no passive refresh.
                             </div>
                         `
                         : `
                             <div class="sub">
-                                Slots refresh after 3 hours or after cooldown.
+                                Slots refresh after their timers expire.
                             </div>
                         `
                 }
@@ -887,7 +931,7 @@ function renderAvailableQuests() {
 
     if (!slots.length) {
         slots =
-            getFallbackQuestCards(QUEST_TYPES.NORMAL);
+            getFallbackQuestSlots(QUEST_TYPES.NORMAL);
     }
 
     const artwork =
@@ -921,7 +965,7 @@ function renderDailyQuests() {
 
     if (!slots.length) {
         slots =
-            getFallbackQuestCards(QUEST_TYPES.DAILY);
+            getFallbackQuestSlots(QUEST_TYPES.DAILY);
     }
 
     const artwork =
@@ -960,13 +1004,14 @@ function renderEvents() {
 
     if (!slots.length) {
         slots =
-            getFallbackQuestCards(QUEST_TYPES.EVENT)
+            getFallbackQuestSlots(QUEST_TYPES.EVENT)
                 .filter(slot => {
+
                     const quest =
                         findQuestForSlot(slot);
 
                     return quest &&
-                        (quest.eventTags || []).some(tag =>
+                        getArrayValue(quest.eventTags).some(tag =>
                             activeEvents.some(event => event.tag === tag)
                         );
                 });
@@ -1031,8 +1076,9 @@ function renderBoss() {
                 : "";
 
         el.innerHTML = `
-            <div class="panel ${artwork ? "artwork-card panel-artwork-card" : ""}"
-                 ${artworkStyle(artwork)}>
+            <div
+                class="panel ${artwork ? "artwork-card panel-artwork-card" : ""}"
+                ${artworkStyle(artwork)}>
 
                 <div class="panel-content">
 
@@ -1076,7 +1122,7 @@ function renderBoss() {
                 </div>
 
                 ${
-                    bossChallengeState.active
+                    bossChallengeState?.active
                         ? `
                             <div class="sub warning">
                                 Boss Challenge active. Complete quests to damage the boss.
@@ -1107,7 +1153,7 @@ function renderBoss() {
             selectedBoss.id === boss.id;
 
         const completed =
-            bossProgression.completedBosses?.includes(boss.id);
+            bossProgression?.completedBosses?.includes(boss.id);
 
         html += `
             <div
@@ -1140,15 +1186,16 @@ function renderBoss() {
         );
 
     const activeThisBoss =
-        bossChallengeState.active &&
+        bossChallengeState?.active &&
         bossChallengeState.currentBossId === selectedBoss.id;
 
     const artwork =
         getArtworkPath(selectedBoss, "boss");
 
     html += `
-        <div class="panel artwork-card boss-artwork-card"
-             ${artworkStyle(artwork)}>
+        <div
+            class="panel ${artwork ? "artwork-card boss-artwork-card" : ""}"
+            ${artworkStyle(artwork)}>
 
             <div class="panel-content">
 
@@ -1176,12 +1223,12 @@ function renderBoss() {
 
                 <div class="sub">
                     Weak:
-                    ${(selectedBoss.weaknesses || []).map(escapeHTML).join(", ") || "None"}
+                    ${getArrayValue(selectedBoss.weaknesses).map(escapeHTML).join(", ") || "None"}
                 </div>
 
                 <div class="sub">
                     Resist:
-                    ${(selectedBoss.resistances || []).map(escapeHTML).join(", ") || "None"}
+                    ${getArrayValue(selectedBoss.resistances).map(escapeHTML).join(", ") || "None"}
                 </div>
 
                 <div class="sub">
@@ -1191,7 +1238,7 @@ function renderBoss() {
                 </div>
     `;
 
-    if (!bossChallengeState.active) {
+    if (!bossChallengeState?.active) {
 
         html += `
             <div
@@ -1277,7 +1324,7 @@ function renderProfile() {
                     Character Stats
                 </div>
 
-                ${Object.entries(playerData.stats)
+                ${Object.entries(playerData.stats || {})
                     .map(([name, stat]) => `
                         <div class="stat-line">
                             <div class="sub">
@@ -1301,17 +1348,17 @@ function renderProfile() {
 
                 <div class="sub">
                     Quests Completed:
-                    ${playerData.lifetime.questsCompleted}
+                    ${playerData.lifetime?.questsCompleted || 0}
                 </div>
 
                 <div class="sub">
                     Bosses Defeated:
-                    ${playerData.lifetime.bossesDefeated}
+                    ${playerData.lifetime?.bossesDefeated || 0}
                 </div>
 
                 <div class="sub">
                     Boss Damage Dealt:
-                    ${playerData.lifetime.totalBossDamageDealt || 0}
+                    ${playerData.lifetime?.totalBossDamageDealt || 0}
                 </div>
 
             </div>
@@ -1402,7 +1449,7 @@ function renderShop() {
                         </div>
 
                         ${
-                            bossChallengeState.active
+                            bossChallengeState?.active
                                 ? `
                                     <div class="btn">
                                         Locked During Boss Challenge
@@ -1578,7 +1625,10 @@ function renderInventory() {
 function renderRelicLoadoutHTML() {
 
     const equipped =
-        relicLoadout.equipped || [];
+        relicLoadout?.equipped || [];
+
+    const slotCount =
+        Number(relicLoadout?.slots || GAME_CONFIG?.relicSlots || 3);
 
     let html = `
         <div class="relic-loadout">
@@ -1586,7 +1636,7 @@ function renderRelicLoadoutHTML() {
 
     for (
         let i = 0;
-        i < relicLoadout.slots;
+        i < slotCount;
         i++
     ) {
 
@@ -1671,7 +1721,7 @@ function renderEffects() {
     const effects =
         typeof getAllActiveEffects === "function"
             ? getAllActiveEffects()
-            : activeEffects || [];
+            : activeEffects || playerData.buffs || [];
 
     el.innerHTML = `
         <div class="panel">
@@ -1685,7 +1735,7 @@ function renderEffects() {
                     effects.length
                         ? effects.map(effect => `
                             <div class="sub">
-                                ${escapeHTML(effect.attribute || effect.type)}
+                                ${escapeHTML(effect.attribute || effect.name || effect.type)}
                                 ${effect.amount ? `+${effect.amount}` : ""}
                                 ${effect.duration ? `(${escapeHTML(effect.duration)})` : ""}
                             </div>
@@ -1765,6 +1815,15 @@ function handleUseItem(id) {
 
     if (typeof useItem === "function") {
         useItem(id);
+    }
+
+    renderAll();
+}
+
+function handleDamageBoss(id, damage) {
+
+    if (typeof damageBoss === "function") {
+        damageBoss(id, damage);
     }
 
     renderAll();
