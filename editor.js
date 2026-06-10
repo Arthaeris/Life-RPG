@@ -1,11 +1,11 @@
 /* =========================================================
-   QUEST CHRONICLES - EDITOR ENGINE v3.1
+   QUEST CHRONICLES - EDITOR ENGINE v4.0
    Artwork + Icons + UI Background Editing
    Compatible with:
-   - database.js v3.1+
+   - database.js v3.x+
    - systems.js v4.x+
-   - render.js v4.2+
-   - save.js v4.x+
+   - render.js v4.3+
+   - save.js v3.x+
 ========================================================= */
 
 
@@ -18,12 +18,148 @@ let editingId = null;
 
 
 /* =========================================================
+   FALLBACK CONSTANTS
+========================================================= */
+
+const EDITOR_QUEST_TYPES = [
+    "normal",
+    "daily",
+    "event",
+    "boss"
+];
+
+const EDITOR_RARITIES = [
+    "Common",
+    "Daily",
+    "Event",
+    "Rare",
+    "Epic",
+    "Legendary"
+];
+
+const EDITOR_ITEM_CATEGORIES = [
+    "consumable",
+    "boost",
+    "utility",
+    "prestige",
+    "title",
+    "key_item"
+];
+
+const EDITOR_EFFECT_TYPES =
+    typeof EFFECT_TYPES !== "undefined"
+        ? Object.values(EFFECT_TYPES)
+        : [
+            "relative_buff",
+            "relative_debuff",
+            "absolute_buff",
+            "absolute_debuff"
+        ];
+
+const EDITOR_EFFECT_ATTRIBUTES =
+    typeof EFFECT_ATTRIBUTES !== "undefined"
+        ? EFFECT_ATTRIBUTES
+        : [
+            "gold",
+            "gold_gain",
+            "xp",
+            "xp_gain",
+            "fitness_xp_gain",
+            "health_xp_gain",
+            "wisdom_xp_gain",
+            "home_xp_gain",
+            "quest_lifetime",
+            "quest_cooldown",
+            "quest_slot_refresh",
+            "boss_damage",
+            "boss_damage_taken",
+            "boss_regeneration",
+            "relic_power",
+            "item_cost",
+            "shop_discount"
+        ];
+
+const EDITOR_EFFECT_DURATIONS =
+    typeof EFFECT_DURATIONS !== "undefined"
+        ? EFFECT_DURATIONS
+        : [
+            "instant",
+            "seconds",
+            "minutes",
+            "hours",
+            "days",
+            "months",
+            "permanent"
+        ];
+
+
+/* =========================================================
+   UI CONFIG SAFETY
+========================================================= */
+
+function ensureUIConfig() {
+
+    if (typeof window.UI_CONFIG === "undefined") {
+        window.UI_CONFIG = {};
+    }
+
+    if (!window.UI_CONFIG.backgrounds) {
+        window.UI_CONFIG.backgrounds = {};
+    }
+
+    if (!window.UI_CONFIG.placeholders) {
+        window.UI_CONFIG.placeholders = {};
+    }
+
+    const backgroundDefaults = {
+        dashboard: "",
+        quests: "",
+        profile: "",
+        shop: "",
+        inventory: "",
+        settings: "",
+        normalQuests: "",
+        dailyQuests: "",
+        eventQuests: "",
+        bossCampaign: ""
+    };
+
+    const placeholderDefaults = {
+        quest: "",
+        event: "",
+        boss: "",
+        item: "",
+        relic: ""
+    };
+
+    Object.keys(backgroundDefaults).forEach(key => {
+
+        if (window.UI_CONFIG.backgrounds[key] === undefined) {
+            window.UI_CONFIG.backgrounds[key] =
+                backgroundDefaults[key];
+        }
+    });
+
+    Object.keys(placeholderDefaults).forEach(key => {
+
+        if (window.UI_CONFIG.placeholders[key] === undefined) {
+            window.UI_CONFIG.placeholders[key] =
+                placeholderDefaults[key];
+        }
+    });
+
+    return window.UI_CONFIG;
+}
+
+
+/* =========================================================
    EDITOR SCHEMAS
 ========================================================= */
 
 const editorSchemas = {
 
     quest: {
+
         title: "Quest Editor",
         target: "quest",
 
@@ -42,17 +178,18 @@ const editorSchemas = {
             type: {
                 type: "select",
                 label: "Quest Type",
-                options: [
-                    "normal",
-                    "daily",
-                    "event",
-                    "boss"
-                ]
+                options: EDITOR_QUEST_TYPES
             },
 
             artwork: {
                 type: "text",
                 label: "Artwork Path"
+            },
+
+            rarity: {
+                type: "select",
+                label: "Rarity",
+                options: EDITOR_RARITIES
             },
 
             tags: {
@@ -65,30 +202,17 @@ const editorSchemas = {
                 label: "Event Tags"
             },
 
-            rarity: {
-                type: "select",
-                label: "Rarity",
-                options: [
-                    "Common",
-                    "Daily",
-                    "Event",
-                    "Rare",
-                    "Epic",
-                    "Legendary"
-                ]
-            },
-
-            xp: {
+            rewardXP: {
                 type: "number",
                 label: "XP Reward"
             },
 
-            gold: {
+            rewardGold: {
                 type: "number",
                 label: "Gold Reward"
             },
 
-            gems: {
+            rewardGems: {
                 type: "number",
                 label: "Gem Reward"
             },
@@ -115,12 +239,12 @@ const editorSchemas = {
 
             rewardItems: {
                 type: "text",
-                label: "Reward Items"
+                label: "Reward Item IDs"
             },
 
             rewardRelics: {
                 type: "text",
-                label: "Reward Relics"
+                label: "Reward Relic IDs"
             },
 
             expiresAfterMinutes: {
@@ -137,6 +261,7 @@ const editorSchemas = {
 
 
     event: {
+
         title: "Event Editor",
         target: "event",
 
@@ -185,6 +310,7 @@ const editorSchemas = {
 
 
     boss: {
+
         title: "Boss Editor",
         target: "boss",
 
@@ -245,40 +371,41 @@ const editorSchemas = {
                 label: "Modifiers"
             },
 
-            xpReward: {
+            rewardXP: {
                 type: "number",
                 label: "XP Reward"
             },
 
-            goldReward: {
+            rewardGold: {
                 type: "number",
                 label: "Gold Reward"
             },
 
-            gemReward: {
+            rewardGems: {
                 type: "number",
                 label: "Gem Reward"
             },
 
-            titleReward: {
+            rewardTitle: {
                 type: "text",
                 label: "Title Reward"
             },
 
             rewardItems: {
                 type: "text",
-                label: "Reward Items"
+                label: "Reward Item IDs"
             },
 
             rewardRelics: {
                 type: "text",
-                label: "Reward Relics"
+                label: "Reward Relic IDs"
             }
         }
     },
 
 
     item: {
+
         title: "Item Editor",
         target: "item",
 
@@ -302,13 +429,7 @@ const editorSchemas = {
             category: {
                 type: "select",
                 label: "Category",
-                options: [
-                    "consumable",
-                    "boost",
-                    "utility",
-                    "prestige",
-                    "title"
-                ]
+                options: EDITOR_ITEM_CATEGORIES
             },
 
             cost: {
@@ -328,55 +449,23 @@ const editorSchemas = {
             effectType: {
                 type: "select",
                 label: "Effect Type",
-                options: [
-                    "relative_buff",
-                    "absolute_buff",
-                    "relative_debuff",
-                    "absolute_debuff"
-                ]
+                options: EDITOR_EFFECT_TYPES
             },
 
-            attribute: {
+            effectAttribute: {
                 type: "select",
-                label: "Attribute",
-                options: [
-                    "gold",
-                    "gold_gain",
-                    "xp",
-                    "xp_gain",
-                    "fitness_xp_gain",
-                    "health_xp_gain",
-                    "wisdom_xp_gain",
-                    "home_xp_gain",
-                    "quest_lifetime",
-                    "quest_cooldown",
-                    "quest_slot_refresh",
-                    "boss_damage",
-                    "boss_damage_taken",
-                    "boss_regeneration",
-                    "relic_power",
-                    "item_cost",
-                    "shop_discount"
-                ]
+                label: "Effect Attribute",
+                options: EDITOR_EFFECT_ATTRIBUTES
             },
 
-            amount: {
+            effectAmount: {
                 type: "number",
-                label: "Amount"
+                label: "Effect Amount"
             },
 
             effectDuration: {
                 type: "select",
-                label: "Duration Type",
-                options: [
-                    "instant",
-                    "seconds",
-                    "minutes",
-                    "hours",
-                    "days",
-                    "months",
-                    "permanent"
-                ]
+                label: "Effect Duration"
             },
 
             durationValue: {
@@ -388,6 +477,7 @@ const editorSchemas = {
 
 
     relic: {
+
         title: "Relic Editor",
         target: "relic",
 
@@ -411,66 +501,30 @@ const editorSchemas = {
             rarity: {
                 type: "select",
                 label: "Rarity",
-                options: [
-                    "Common",
-                    "Rare",
-                    "Epic",
-                    "Legendary"
-                ]
+                options: EDITOR_RARITIES
             },
 
             effectType: {
                 type: "select",
                 label: "Effect Type",
-                options: [
-                    "relative_buff",
-                    "absolute_buff",
-                    "relative_debuff",
-                    "absolute_debuff"
-                ]
+                options: EDITOR_EFFECT_TYPES
             },
 
-            attribute: {
+            effectAttribute: {
                 type: "select",
-                label: "Attribute",
-                options: [
-                    "gold",
-                    "gold_gain",
-                    "xp",
-                    "xp_gain",
-                    "fitness_xp_gain",
-                    "health_xp_gain",
-                    "wisdom_xp_gain",
-                    "home_xp_gain",
-                    "quest_lifetime",
-                    "quest_cooldown",
-                    "quest_slot_refresh",
-                    "boss_damage",
-                    "boss_damage_taken",
-                    "boss_regeneration",
-                    "relic_power",
-                    "item_cost",
-                    "shop_discount"
-                ]
+                label: "Effect Attribute",
+                options: EDITOR_EFFECT_ATTRIBUTES
             },
 
-            amount: {
+            effectAmount: {
                 type: "number",
-                label: "Amount"
+                label: "Effect Amount"
             },
 
             effectDuration: {
                 type: "select",
-                label: "Duration Type",
-                options: [
-                    "instant",
-                    "seconds",
-                    "minutes",
-                    "hours",
-                    "days",
-                    "months",
-                    "permanent"
-                ]
+                label: "Effect Duration",
+                options: EDITOR_EFFECT_DURATIONS
             },
 
             durationValue: {
@@ -482,7 +536,8 @@ const editorSchemas = {
 
 
     ui: {
-        title: "UI Background Editor",
+
+        title: "Background Editor",
         target: "ui",
 
         fields: {
@@ -539,27 +594,27 @@ const editorSchemas = {
 
             placeholderQuest: {
                 type: "text",
-                label: "Quest Placeholder"
+                label: "Quest Placeholder Artwork"
             },
 
             placeholderEvent: {
                 type: "text",
-                label: "Event Placeholder"
+                label: "Event Placeholder Artwork"
             },
 
             placeholderBoss: {
                 type: "text",
-                label: "Boss Placeholder"
+                label: "Boss Placeholder Artwork"
             },
 
             placeholderItem: {
                 type: "text",
-                label: "Item Placeholder"
+                label: "Item Placeholder Icon"
             },
 
             placeholderRelic: {
                 type: "text",
-                label: "Relic Placeholder"
+                label: "Relic Placeholder Icon"
             }
         }
     }
@@ -615,16 +670,16 @@ function openEditor(type, id = null) {
     if (!container) return;
 
     const data =
-        normalizeDataForForm(type, id);
+        loadEditorData(type, id);
 
     container.innerHTML =
         buildEditorList(type) +
-        buildForm(schema, data);
+        buildEditorForm(schema, data);
 }
 
 
 /* =========================================================
-   EXISTING ENTRIES
+   LIST
 ========================================================= */
 
 function buildEditorList(type) {
@@ -636,11 +691,11 @@ function buildEditorList(type) {
                 <div class="panel-content">
 
                     <div class="title">
-                        UI Backgrounds
+                        UI Artwork Settings
                     </div>
 
                     <div class="sub">
-                        Edit screen backgrounds, panel backgrounds, and fallback placeholders.
+                        Set screen backgrounds, quest-board panel backgrounds, and fallback artwork paths.
                     </div>
 
                 </div>
@@ -656,25 +711,27 @@ function buildEditorList(type) {
             <div class="panel-content">
 
                 <div class="title">
-                    Existing ${escapeEditorValue(type)}s
+                    Existing ${escapeEditorHTML(type)}s
                 </div>
 
                 ${
                     db.length
-                        ? db.map(item => `
+                        ? db.map(entry => `
                             <div class="editor-entry">
 
                                 <div class="sub">
-                                    ${escapeEditorValue(item.name || item.tag || item.id)}
+                                    ${escapeEditorHTML(entry.name || entry.tag || entry.id)}
                                 </div>
 
-                                <div class="btn"
-                                     onclick="openEditor('${escapeEditorValue(type)}','${escapeEditorValue(item.id)}')">
+                                <div
+                                    class="btn"
+                                    onclick="openEditor('${escapeEditorAttr(type)}','${escapeEditorAttr(entry.id)}')">
                                     Edit
                                 </div>
 
-                                <div class="btn"
-                                     onclick="deleteEditorEntry('${escapeEditorValue(type)}','${escapeEditorValue(item.id)}')">
+                                <div
+                                    class="btn"
+                                    onclick="deleteEditorEntry('${escapeEditorAttr(type)}','${escapeEditorAttr(entry.id)}')">
                                     Delete
                                 </div>
 
@@ -694,24 +751,186 @@ function buildEditorList(type) {
 
 
 /* =========================================================
-   NORMALIZE FOR FORM
+   FORM
 ========================================================= */
 
-function normalizeDataForForm(type, id) {
+function buildEditorForm(schema, data) {
 
-    if (type === "ui") {
-        return normalizeUIConfigForForm();
+    let html = `
+        <div class="panel">
+            <div class="panel-content">
+
+                <div class="title">
+                    ${escapeEditorHTML(schema.title)}
+                </div>
+    `;
+
+    for (const key in schema.fields) {
+
+        const field =
+            schema.fields[key];
+
+        const value =
+            data[key] ?? "";
+
+        const description =
+            getFieldHint(schema.target, key);
+
+        html += `
+            <div class="sub">
+                ${escapeEditorHTML(field.label)}
+            </div>
+        `;
+
+        if (description) {
+
+            html += `
+                <div class="sub muted">
+                    ${escapeEditorHTML(description)}
+                </div>
+            `;
+        }
+
+        if (field.type === "textarea") {
+
+            html += `
+                <textarea
+                    id="field_${escapeEditorAttr(key)}">${escapeEditorHTML(value)}</textarea>
+            `;
+
+        } else if (field.type === "select") {
+
+            const options =
+                key === "effectDuration"
+                    ? EDITOR_EFFECT_DURATIONS
+                    : field.options || [];
+
+            html += `
+                <select id="field_${escapeEditorAttr(key)}">
+                    ${options.map(option => `
+                        <option
+                            value="${escapeEditorAttr(option)}"
+                            ${String(value) === String(option) ? "selected" : ""}>
+                            ${escapeEditorHTML(option)}
+                        </option>
+                    `).join("")}
+                </select>
+            `;
+
+        } else {
+
+            html += `
+                <input
+                    type="${escapeEditorAttr(field.type)}"
+                    id="field_${escapeEditorAttr(key)}"
+                    value="${escapeEditorAttr(value)}">
+            `;
+        }
     }
 
-    if (!id) return {};
+    html += `
+                <div
+                    class="btn primary"
+                    onclick="saveEditor()">
+                    ${
+                        schema.target === "ui"
+                            ? "Save UI Settings"
+                            : editingId
+                                ? "Save Changes"
+                                : "Create Entry"
+                    }
+                </div>
+
+                <div
+                    class="btn"
+                    onclick="clearEditor()">
+                    Close Editor
+                </div>
+
+            </div>
+        </div>
+    `;
+
+    return html;
+}
+
+function getFieldHint(type, key) {
+
+    if (
+        key === "artwork" ||
+        key === "icon" ||
+        key.includes("placeholder") ||
+        [
+            "dashboard",
+            "quests",
+            "profile",
+            "shop",
+            "inventory",
+            "settings",
+            "normalQuests",
+            "dailyQuests",
+            "eventQuests",
+            "bossCampaign"
+        ].includes(key)
+    ) {
+        return "Use a relative path like assets/bosses/goblinking.PNG";
+    }
+
+    if (
+        key === "rewardItems" ||
+        key === "rewardRelics"
+    ) {
+        return "Comma separated IDs, for example: i001, i002";
+    }
+
+    if (
+        key === "abilities"
+    ) {
+        return "One per line: Name|effect_id";
+    }
+
+    if (
+        key === "modifiers"
+    ) {
+        return "One per line: type|attribute|amount|duration|durationValue";
+    }
+
+    if (
+        key === "tags" ||
+        key === "eventTags" ||
+        key === "weaknesses" ||
+        key === "resistances"
+    ) {
+        return "Comma separated values.";
+    }
+
+    return "";
+}
+
+
+/* =========================================================
+   LOAD EDITOR DATA
+========================================================= */
+
+function loadEditorData(type, id) {
+
+    if (type === "ui") {
+        return loadUIEditorData();
+    }
+
+    if (!id) {
+        return getDefaultEditorData(type);
+    }
 
     const db =
         getEditorDatabase(type);
 
     const item =
-        db.find(x => x.id === id);
+        db.find(entry => entry.id === id);
 
-    if (!item) return {};
+    if (!item) {
+        return getDefaultEditorData(type);
+    }
 
     if (type === "quest") {
 
@@ -719,21 +938,21 @@ function normalizeDataForForm(type, id) {
             ...item,
 
             artwork:
-                item.artwork || "",
+                cleanEditorPath(item.artwork || ""),
 
             tags:
-                (item.tags || []).join(", "),
+                joinList(item.tags),
 
             eventTags:
-                (item.eventTags || []).join(", "),
+                joinList(item.eventTags),
 
-            xp:
+            rewardXP:
                 item.rewards?.xp || 0,
 
-            gold:
+            rewardGold:
                 item.rewards?.gold || 0,
 
-            gems:
+            rewardGems:
                 item.rewards?.gems || 0,
 
             fitnessXP:
@@ -749,10 +968,10 @@ function normalizeDataForForm(type, id) {
                 item.rewards?.stats?.Home || 0,
 
             rewardItems:
-                (item.rewards?.items || []).join(", "),
+                joinList(item.rewards?.items),
 
             rewardRelics:
-                (item.rewards?.relics || []).join(", "),
+                joinList(item.rewards?.relics),
 
             expiresAfterMinutes:
                 item.boardConfig?.expiresAfterMinutes ||
@@ -772,7 +991,7 @@ function normalizeDataForForm(type, id) {
             ...item,
 
             artwork:
-                item.artwork || "",
+                cleanEditorPath(item.artwork || ""),
 
             isActiveOverride:
                 String(item.isActiveOverride || false)
@@ -785,13 +1004,13 @@ function normalizeDataForForm(type, id) {
             ...item,
 
             artwork:
-                item.artwork || "",
+                cleanEditorPath(item.artwork || ""),
 
             weaknesses:
-                (item.weaknesses || []).join(", "),
+                joinList(item.weaknesses),
 
             resistances:
-                (item.resistances || []).join(", "),
+                joinList(item.resistances),
 
             abilities:
                 serializeAbilities(item.abilities),
@@ -799,47 +1018,47 @@ function normalizeDataForForm(type, id) {
             modifiers:
                 serializeEffects(item.modifiers),
 
-            xpReward:
+            rewardXP:
                 item.rewards?.xp || 0,
 
-            goldReward:
+            rewardGold:
                 item.rewards?.gold || 0,
 
-            gemReward:
+            rewardGems:
                 item.rewards?.gems || 0,
 
-            titleReward:
+            rewardTitle:
                 item.rewards?.title || "",
 
             rewardItems:
-                (item.rewards?.items || []).join(", "),
+                joinList(item.rewards?.items),
 
             rewardRelics:
-                (item.rewards?.relics || []).join(", ")
+                joinList(item.rewards?.relics)
         };
     }
 
     if (type === "item") {
 
         const effect =
-            item.effects?.[0] || {};
+            getFirstEffect(item);
 
         return {
             ...item,
 
             icon:
-                item.icon || "",
+                cleanEditorPath(item.icon || ""),
 
             stackable:
                 String(item.stackable || false),
 
             effectType:
-                effect.type || EFFECT_TYPES.RELATIVE_BUFF,
+                effect.type || EDITOR_EFFECT_TYPES[0],
 
-            attribute:
-                effect.attribute || "xp_gain",
+            effectAttribute:
+                effect.attribute || EDITOR_EFFECT_ATTRIBUTES[0],
 
-            amount:
+            effectAmount:
                 effect.amount || 0,
 
             effectDuration:
@@ -853,21 +1072,21 @@ function normalizeDataForForm(type, id) {
     if (type === "relic") {
 
         const effect =
-            item.effects?.[0] || {};
+            getFirstEffect(item);
 
         return {
             ...item,
 
             icon:
-                item.icon || "",
+                cleanEditorPath(item.icon || ""),
 
             effectType:
-                effect.type || EFFECT_TYPES.RELATIVE_BUFF,
+                effect.type || EDITOR_EFFECT_TYPES[0],
 
-            attribute:
-                effect.attribute || "gold_gain",
+            effectAttribute:
+                effect.attribute || EDITOR_EFFECT_ATTRIBUTES[0],
 
-            amount:
+            effectAmount:
                 effect.amount || 0,
 
             effectDuration:
@@ -881,142 +1100,142 @@ function normalizeDataForForm(type, id) {
     return item;
 }
 
-function normalizeUIConfigForForm() {
+function getDefaultEditorData(type) {
+
+    if (type === "quest") {
+
+        return {
+            type: QUEST_TYPES?.NORMAL || "normal",
+            artwork: "",
+            rarity: "Common",
+            rewardXP: 0,
+            rewardGold: 0,
+            rewardGems: 0,
+            fitnessXP: 0,
+            healthXP: 0,
+            wisdomXP: 0,
+            homeXP: 0,
+            rewardItems: "",
+            rewardRelics: "",
+            expiresAfterMinutes: GAME_CONFIG?.questLifetimeMinutes || 180,
+            cooldownMinutes: GAME_CONFIG?.questCooldownMinutes || 15
+        };
+    }
+
+    if (type === "event") {
+
+        return {
+            artwork: "",
+            isActiveOverride: "false"
+        };
+    }
+
+    if (type === "boss") {
+
+        return {
+            artwork: "",
+            unlockLevel: 5,
+            maxHp: 100,
+            hp: 100,
+            regenRate: 0,
+            rewardXP: 0,
+            rewardGold: 0,
+            rewardGems: 0,
+            rewardTitle: "",
+            rewardItems: "",
+            rewardRelics: "",
+            modifiers: "",
+            abilities: ""
+        };
+    }
+
+    if (type === "item") {
+
+        return {
+            icon: "",
+            category: "consumable",
+            cost: 0,
+            stackable: "false",
+            effectType: EDITOR_EFFECT_TYPES[0],
+            effectAttribute: EDITOR_EFFECT_ATTRIBUTES[0],
+            effectAmount: 0,
+            effectDuration: "instant",
+            durationValue: 0
+        };
+    }
+
+    if (type === "relic") {
+
+        return {
+            icon: "",
+            rarity: "Common",
+            effectType: EDITOR_EFFECT_TYPES[0],
+            effectAttribute: EDITOR_EFFECT_ATTRIBUTES[0],
+            effectAmount: 0,
+            effectDuration: "permanent",
+            durationValue: 0
+        };
+    }
+
+    return {};
+}
+
+function loadUIEditorData() {
+
+    const config =
+        ensureUIConfig();
 
     return {
         dashboard:
-            UI_CONFIG?.backgrounds?.dashboard || "",
+            config.backgrounds.dashboard || "",
 
         quests:
-            UI_CONFIG?.backgrounds?.quests || "",
+            config.backgrounds.quests || "",
 
         profile:
-            UI_CONFIG?.backgrounds?.profile || "",
+            config.backgrounds.profile || "",
 
         shop:
-            UI_CONFIG?.backgrounds?.shop || "",
+            config.backgrounds.shop || "",
 
         inventory:
-            UI_CONFIG?.backgrounds?.inventory || "",
+            config.backgrounds.inventory || "",
 
         settings:
-            UI_CONFIG?.backgrounds?.settings || "",
+            config.backgrounds.settings || "",
 
         normalQuests:
-            UI_CONFIG?.backgrounds?.normalQuests || "",
+            config.backgrounds.normalQuests || "",
 
         dailyQuests:
-            UI_CONFIG?.backgrounds?.dailyQuests || "",
+            config.backgrounds.dailyQuests || "",
 
         eventQuests:
-            UI_CONFIG?.backgrounds?.eventQuests || "",
+            config.backgrounds.eventQuests || "",
 
         bossCampaign:
-            UI_CONFIG?.backgrounds?.bossCampaign || "",
+            config.backgrounds.bossCampaign || "",
 
         placeholderQuest:
-            UI_CONFIG?.placeholders?.quest || "",
+            config.placeholders.quest || "",
 
         placeholderEvent:
-            UI_CONFIG?.placeholders?.event || "",
+            config.placeholders.event || "",
 
         placeholderBoss:
-            UI_CONFIG?.placeholders?.boss || "",
+            config.placeholders.boss || "",
 
         placeholderItem:
-            UI_CONFIG?.placeholders?.item || "",
+            config.placeholders.item || "",
 
         placeholderRelic:
-            UI_CONFIG?.placeholders?.relic || ""
+            config.placeholders.relic || ""
     };
 }
 
 
 /* =========================================================
-   FORM BUILDER
-========================================================= */
-
-function buildForm(schema, data) {
-
-    let html = `
-        <div class="panel">
-            <div class="panel-content">
-
-                <div class="title">
-                    ${escapeEditorValue(schema.title)}
-                </div>
-    `;
-
-    for (const key in schema.fields) {
-
-        const field =
-            schema.fields[key];
-
-        const value =
-            data[key] ?? "";
-
-        html += `
-            <div class="sub">
-                ${escapeEditorValue(field.label)}
-            </div>
-        `;
-
-        if (field.type === "textarea") {
-
-            html += `
-                <textarea
-                    id="field_${escapeEditorValue(key)}"
-                    style="width:100%;height:80px;">${escapeEditorValue(value)}</textarea>
-            `;
-        }
-
-        else if (field.type === "select") {
-
-            html += `
-                <select id="field_${escapeEditorValue(key)}">
-                    ${field.options.map(option => `
-                        <option
-                            value="${escapeEditorValue(option)}"
-                            ${String(value) === String(option) ? "selected" : ""}>
-                            ${escapeEditorValue(option)}
-                        </option>
-                    `).join("")}
-                </select>
-            `;
-        }
-
-        else {
-
-            html += `
-                <input
-                    type="${escapeEditorValue(field.type)}"
-                    id="field_${escapeEditorValue(key)}"
-                    value="${escapeEditorValue(value)}">
-            `;
-        }
-    }
-
-    html += `
-                <div class="btn primary"
-                     onclick="saveEditor()">
-                    ${editingId ? "Save Changes" : schema.target === "ui" ? "Save UI Settings" : "Create"}
-                </div>
-
-                <div class="btn"
-                     onclick="clearEditor()">
-                    Close Editor
-                </div>
-
-            </div>
-        </div>
-    `;
-
-    return html;
-}
-
-
-/* =========================================================
-   SAVE
+   SAVE EDITOR
 ========================================================= */
 
 function saveEditor() {
@@ -1031,10 +1250,15 @@ function saveEditor() {
 
     if (schema.target === "ui") {
 
-        applyUIConfigFromForm(raw);
+        saveUIEditorData(raw);
 
-        renderAll?.();
-        manualSave?.();
+        if (typeof renderAll === "function") {
+            renderAll();
+        }
+
+        if (typeof manualSave === "function") {
+            manualSave();
+        }
 
         openEditor("ui");
 
@@ -1048,11 +1272,11 @@ function saveEditor() {
 
     const existing =
         editingId
-            ? db.find(x => x.id === editingId)
+            ? db.find(entry => entry.id === editingId)
             : null;
 
-    const obj =
-        normalizeFormForDatabase(
+    const entry =
+        normalizeEntry(
             schema.target,
             raw,
             existing
@@ -1060,48 +1284,35 @@ function saveEditor() {
 
     if (editingId) {
 
-        obj.id = editingId;
+        entry.id =
+            editingId;
 
         const index =
             db.findIndex(
-                x => x.id === editingId
+                item => item.id === editingId
             );
 
         if (index !== -1) {
-            db[index] = obj;
+            db[index] = entry;
         }
 
     } else {
 
-        obj.id =
+        entry.id =
             generateEditorId(schema.target);
 
-        db.push(obj);
+        db.push(entry);
     }
 
-    if (
-        schema.target === "quest" &&
-        typeof generateQuestBoard === "function"
-    ) {
-        generateQuestBoard();
+    postEditorSave(schema.target);
+
+    if (typeof manualSave === "function") {
+        manualSave();
     }
 
-    if (
-        schema.target === "event" &&
-        typeof generateEventQuestBoard === "function"
-    ) {
-        generateEventQuestBoard();
+    if (typeof renderAll === "function") {
+        renderAll();
     }
-
-    if (
-        schema.target === "boss" &&
-        typeof updateBossUnlocks === "function"
-    ) {
-        updateBossUnlocks();
-    }
-
-    renderAll?.();
-    manualSave?.();
 
     openEditor(currentEditorType);
 }
@@ -1110,31 +1321,52 @@ function collectEditorFields(schema) {
 
     const raw = {};
 
-    for (const key in schema.fields) {
+    Object.keys(schema.fields).forEach(key => {
 
         const el =
             document.getElementById(`field_${key}`);
 
-        if (!el) continue;
-
         raw[key] =
-            el.value;
-    }
+            el?.value ?? "";
+    });
 
     return raw;
 }
 
+function postEditorSave(type) {
+
+    if (
+        type === "quest" &&
+        typeof generateQuestBoard === "function"
+    ) {
+        generateQuestBoard();
+    }
+
+    if (
+        type === "event" &&
+        typeof generateEventQuestBoard === "function"
+    ) {
+        generateEventQuestBoard();
+    }
+
+    if (
+        type === "boss" &&
+        typeof updateBossUnlocks === "function"
+    ) {
+        updateBossUnlocks();
+    }
+}
+
 
 /* =========================================================
-   DB CONVERSION
+   NORMALIZATION
 ========================================================= */
 
-function normalizeFormForDatabase(type, raw, existing = null) {
+function normalizeEntry(type, raw, existing = null) {
 
     if (type === "quest") {
 
         return {
-
             name:
                 raw.name || "Unnamed Quest",
 
@@ -1142,10 +1374,13 @@ function normalizeFormForDatabase(type, raw, existing = null) {
                 raw.description || "",
 
             type:
-                raw.type || QUEST_TYPES.NORMAL,
+                raw.type || QUEST_TYPES?.NORMAL || "normal",
 
             artwork:
-                raw.artwork || "",
+                cleanEditorPath(raw.artwork),
+
+            rarity:
+                raw.rarity || "Common",
 
             tags:
                 splitList(raw.tags),
@@ -1153,19 +1388,16 @@ function normalizeFormForDatabase(type, raw, existing = null) {
             eventTags:
                 splitList(raw.eventTags),
 
-            rarity:
-                raw.rarity || "Common",
-
             rewards: {
 
                 xp:
-                    numberOrZero(raw.xp),
+                    numberOrZero(raw.rewardXP),
 
                 gold:
-                    numberOrZero(raw.gold),
+                    numberOrZero(raw.rewardGold),
 
                 gems:
-                    numberOrZero(raw.gems),
+                    numberOrZero(raw.rewardGems),
 
                 stats: {
 
@@ -1194,13 +1426,13 @@ function normalizeFormForDatabase(type, raw, existing = null) {
                 expiresAfterMinutes:
                     numberOrFallback(
                         raw.expiresAfterMinutes,
-                        GAME_CONFIG.questLifetimeMinutes || 180
+                        GAME_CONFIG?.questLifetimeMinutes || 180
                     ),
 
                 cooldownMinutes:
                     numberOrFallback(
                         raw.cooldownMinutes,
-                        GAME_CONFIG.questCooldownMinutes || 15
+                        GAME_CONFIG?.questCooldownMinutes || 15
                     )
             }
         };
@@ -1219,7 +1451,7 @@ function normalizeFormForDatabase(type, raw, existing = null) {
                 raw.description || "",
 
             artwork:
-                raw.artwork || "",
+                cleanEditorPath(raw.artwork),
 
             startDate:
                 raw.startDate || "",
@@ -1234,8 +1466,16 @@ function normalizeFormForDatabase(type, raw, existing = null) {
 
     if (type === "boss") {
 
-        return {
+        const maxHp =
+            numberOrFallback(raw.maxHp, 100);
 
+        const hp =
+            numberOrFallback(
+                raw.hp,
+                existing?.hp || maxHp
+            );
+
+        return {
             name:
                 raw.name || "Unnamed Boss",
 
@@ -1243,21 +1483,19 @@ function normalizeFormForDatabase(type, raw, existing = null) {
                 raw.description || "",
 
             artwork:
-                raw.artwork || "",
+                cleanEditorPath(raw.artwork),
 
             unlockLevel:
                 numberOrFallback(raw.unlockLevel, 5),
 
             maxHp:
-                numberOrFallback(raw.maxHp, 100),
+                maxHp,
 
             hp:
-                clampBossHp(
-                    numberOrFallback(
-                        raw.hp,
-                        raw.maxHp || 100
-                    ),
-                    numberOrFallback(raw.maxHp, 100)
+                clampNumber(
+                    hp,
+                    0,
+                    maxHp
                 ),
 
             regenRate:
@@ -1278,16 +1516,16 @@ function normalizeFormForDatabase(type, raw, existing = null) {
             rewards: {
 
                 xp:
-                    numberOrZero(raw.xpReward),
+                    numberOrZero(raw.rewardXP),
 
                 gold:
-                    numberOrZero(raw.goldReward),
+                    numberOrZero(raw.rewardGold),
 
                 gems:
-                    numberOrZero(raw.gemReward),
+                    numberOrZero(raw.rewardGems),
 
                 title:
-                    raw.titleReward || "",
+                    raw.rewardTitle || "",
 
                 relics:
                     splitList(raw.rewardRelics),
@@ -1301,7 +1539,6 @@ function normalizeFormForDatabase(type, raw, existing = null) {
     if (type === "item") {
 
         return {
-
             name:
                 raw.name || "Unnamed Item",
 
@@ -1309,7 +1546,7 @@ function normalizeFormForDatabase(type, raw, existing = null) {
                 raw.description || "",
 
             icon:
-                raw.icon || "",
+                cleanEditorPath(raw.icon),
 
             category:
                 raw.category || "consumable",
@@ -1322,7 +1559,7 @@ function normalizeFormForDatabase(type, raw, existing = null) {
 
             effects:
                 [
-                    buildEffectFromRaw(raw)
+                    buildEffect(raw)
                 ].filter(Boolean)
         };
     }
@@ -1330,7 +1567,6 @@ function normalizeFormForDatabase(type, raw, existing = null) {
     if (type === "relic") {
 
         return {
-
             name:
                 raw.name || "Unnamed Relic",
 
@@ -1338,14 +1574,14 @@ function normalizeFormForDatabase(type, raw, existing = null) {
                 raw.description || "",
 
             icon:
-                raw.icon || "",
+                cleanEditorPath(raw.icon),
 
             rarity:
                 raw.rarity || "Common",
 
             effects:
                 [
-                    buildEffectFromRaw(raw)
+                    buildEffect(raw)
                 ].filter(Boolean)
         };
     }
@@ -1353,21 +1589,20 @@ function normalizeFormForDatabase(type, raw, existing = null) {
     return existing || raw;
 }
 
-function buildEffectFromRaw(raw) {
+function buildEffect(raw) {
 
     const duration =
         raw.effectDuration || "instant";
 
     const effect = {
-
         type:
-            raw.effectType || EFFECT_TYPES.RELATIVE_BUFF,
+            raw.effectType || EDITOR_EFFECT_TYPES[0],
 
         attribute:
-            raw.attribute || "",
+            raw.effectAttribute || EDITOR_EFFECT_ATTRIBUTES[0],
 
         amount:
-            numberOrZero(raw.amount),
+            numberOrZero(raw.effectAmount),
 
         duration:
             duration
@@ -1388,60 +1623,55 @@ function buildEffectFromRaw(raw) {
     return effect;
 }
 
-function applyUIConfigFromForm(raw) {
+function saveUIEditorData(raw) {
 
-    if (!UI_CONFIG.backgrounds) {
-        UI_CONFIG.backgrounds = {};
-    }
+    const config =
+        ensureUIConfig();
 
-    if (!UI_CONFIG.placeholders) {
-        UI_CONFIG.placeholders = {};
-    }
+    config.backgrounds.dashboard =
+        cleanEditorPath(raw.dashboard);
 
-    UI_CONFIG.backgrounds.dashboard =
-        raw.dashboard || "";
+    config.backgrounds.quests =
+        cleanEditorPath(raw.quests);
 
-    UI_CONFIG.backgrounds.quests =
-        raw.quests || "";
+    config.backgrounds.profile =
+        cleanEditorPath(raw.profile);
 
-    UI_CONFIG.backgrounds.profile =
-        raw.profile || "";
+    config.backgrounds.shop =
+        cleanEditorPath(raw.shop);
 
-    UI_CONFIG.backgrounds.shop =
-        raw.shop || "";
+    config.backgrounds.inventory =
+        cleanEditorPath(raw.inventory);
 
-    UI_CONFIG.backgrounds.inventory =
-        raw.inventory || "";
+    config.backgrounds.settings =
+        cleanEditorPath(raw.settings);
 
-    UI_CONFIG.backgrounds.settings =
-        raw.settings || "";
+    config.backgrounds.normalQuests =
+        cleanEditorPath(raw.normalQuests);
 
-    UI_CONFIG.backgrounds.normalQuests =
-        raw.normalQuests || "";
+    config.backgrounds.dailyQuests =
+        cleanEditorPath(raw.dailyQuests);
 
-    UI_CONFIG.backgrounds.dailyQuests =
-        raw.dailyQuests || "";
+    config.backgrounds.eventQuests =
+        cleanEditorPath(raw.eventQuests);
 
-    UI_CONFIG.backgrounds.eventQuests =
-        raw.eventQuests || "";
+    config.backgrounds.bossCampaign =
+        cleanEditorPath(raw.bossCampaign);
 
-    UI_CONFIG.backgrounds.bossCampaign =
-        raw.bossCampaign || "";
+    config.placeholders.quest =
+        cleanEditorPath(raw.placeholderQuest);
 
-    UI_CONFIG.placeholders.quest =
-        raw.placeholderQuest || "";
+    config.placeholders.event =
+        cleanEditorPath(raw.placeholderEvent);
 
-    UI_CONFIG.placeholders.event =
-        raw.placeholderEvent || "";
+    config.placeholders.boss =
+        cleanEditorPath(raw.placeholderBoss);
 
-    UI_CONFIG.placeholders.boss =
-        raw.placeholderBoss || "";
+    config.placeholders.item =
+        cleanEditorPath(raw.placeholderItem);
 
-    UI_CONFIG.placeholders.item =
-        raw.placeholderItem || "";
-
-    UI_CONFIG.placeholders.relic =
-        raw.placeholderRelic || "";
+    config.placeholders.relic =
+        cleanEditorPath(raw.placeholderRelic);
 }
 
 
@@ -1457,7 +1687,7 @@ function deleteEditorEntry(type, id) {
         getEditorDatabase(type);
 
     const index =
-        db.findIndex(x => x.id === id);
+        db.findIndex(entry => entry.id === id);
 
     if (index === -1) return;
 
@@ -1471,39 +1701,28 @@ function deleteEditorEntry(type, id) {
     }
 
     if (
-        type === "quest" &&
-        typeof generateQuestBoard === "function"
-    ) {
-        generateQuestBoard();
-    }
-
-    if (
-        type === "event" &&
-        typeof generateEventQuestBoard === "function"
-    ) {
-        generateEventQuestBoard();
-    }
-
-    if (
         type === "boss" &&
-        bossProgression.selectedBossId === id
+        bossProgression?.selectedBossId === id
     ) {
         bossProgression.selectedBossId = null;
-
-        if (typeof updateBossUnlocks === "function") {
-            updateBossUnlocks();
-        }
     }
 
-    renderAll?.();
-    manualSave?.();
+    postEditorSave(type);
+
+    if (typeof manualSave === "function") {
+        manualSave();
+    }
+
+    if (typeof renderAll === "function") {
+        renderAll();
+    }
 
     openEditor(type);
 }
 
 
 /* =========================================================
-   CLEAR EDITOR
+   CLOSE
 ========================================================= */
 
 function clearEditor() {
@@ -1527,20 +1746,27 @@ function clearEditor() {
 function serializeAbilities(abilities) {
 
     return (abilities || [])
-        .map(ability => `${ability.name || ""}|${ability.effect || ""}`)
+        .map(ability => {
+            return [
+                ability.name || "",
+                ability.effect || ""
+            ].join("|");
+        })
         .join("\n");
 }
 
 function serializeEffects(effects) {
 
     return (effects || [])
-        .map(effect => [
-            effect.type || "",
-            effect.attribute || "",
-            effect.amount ?? 0,
-            effect.duration || "permanent",
-            effect.durationValue ?? ""
-        ].join("|"))
+        .map(effect => {
+            return [
+                effect.type || "",
+                effect.attribute || "",
+                effect.amount ?? 0,
+                effect.duration || "permanent",
+                effect.durationValue ?? ""
+            ].join("|");
+        })
         .join("\n");
 }
 
@@ -1553,15 +1779,24 @@ function splitList(value) {
 
     return String(value || "")
         .split(",")
-        .map(v => v.trim())
+        .map(item => item.trim())
         .filter(Boolean);
+}
+
+function joinList(value) {
+
+    if (!Array.isArray(value)) {
+        return "";
+    }
+
+    return value.join(", ");
 }
 
 function parseAbilities(value) {
 
     return String(value || "")
         .split("\n")
-        .map(v => v.trim())
+        .map(line => line.trim())
         .filter(Boolean)
         .map(line => {
 
@@ -1582,7 +1817,7 @@ function parseEffects(value) {
 
     return String(value || "")
         .split("\n")
-        .map(v => v.trim())
+        .map(line => line.trim())
         .filter(Boolean)
         .map(line => {
 
@@ -1590,12 +1825,11 @@ function parseEffects(value) {
                 line.split("|");
 
             const effect = {
-
                 type:
-                    parts[0]?.trim() || EFFECT_TYPES.RELATIVE_BUFF,
+                    parts[0]?.trim() || EDITOR_EFFECT_TYPES[0],
 
                 attribute:
-                    parts[1]?.trim() || "",
+                    parts[1]?.trim() || EDITOR_EFFECT_ATTRIBUTES[0],
 
                 amount:
                     numberOrZero(parts[2]),
@@ -1616,9 +1850,22 @@ function parseEffects(value) {
         });
 }
 
+function getFirstEffect(item) {
+
+    if (Array.isArray(item?.effects)) {
+        return item.effects[0] || {};
+    }
+
+    if (item?.effect) {
+        return item.effect;
+    }
+
+    return {};
+}
+
 
 /* =========================================================
-   HELPERS
+   VALUE HELPERS
 ========================================================= */
 
 function numberOrZero(value) {
@@ -1636,30 +1883,46 @@ function numberOrFallback(value, fallback) {
     const number =
         Number(value);
 
-    return Number.isFinite(number) && number !== 0
-        ? number
-        : fallback;
+    if (
+        Number.isFinite(number) &&
+        value !== "" &&
+        value !== null &&
+        value !== undefined
+    ) {
+        return number;
+    }
+
+    return fallback;
 }
 
-function clampBossHp(hp, maxHp) {
+function clampNumber(value, min, max) {
 
     return Math.max(
-        0,
-        Math.min(
-            hp,
-            maxHp
-        )
+        min,
+        Math.min(max, value)
     );
+}
+
+function cleanEditorPath(value) {
+
+    return String(value || "")
+        .trim()
+        .replaceAll("\\", "/");
 }
 
 function generateEditorId(prefix = "id") {
 
     return `${prefix}_${Date.now()}_${Math.random()
         .toString(36)
-        .substring(2, 7)}`;
+        .slice(2, 7)}`;
 }
 
-function escapeEditorValue(value) {
+
+/* =========================================================
+   ESCAPE HELPERS
+========================================================= */
+
+function escapeEditorHTML(value) {
 
     return String(value ?? "")
         .replaceAll("&", "&amp;")
@@ -1667,4 +1930,8 @@ function escapeEditorValue(value) {
         .replaceAll(">", "&gt;")
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#039;");
+}
+
+function escapeEditorAttr(value) {
+    return escapeEditorHTML(value);
 }
