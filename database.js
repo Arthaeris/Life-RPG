@@ -1,7 +1,12 @@
 /* =========================================================
-   QUEST CHRONICLES - DATABASE v3.1
+   QUEST CHRONICLES - DATABASE v3.2
    Progression + Quest Board + Boss Campaign System
-   Artwork + UI Background Foundation
+   Artwork + Icons + UI Background Foundation
+   Compatible with:
+   - systems.js v4.x+
+   - render.js v4.3+
+   - editor.js v4.0+
+   - save.js v3.x+
 ========================================================= */
 
 
@@ -34,8 +39,8 @@ const GAME_CONFIG = {
 
 /* =========================================================
    UI CONFIG
-   Paths are relative to index.html.
-   Use empty strings until artwork exists in your repository.
+   All paths are relative to index.html.
+   Example: assets/bosses/goblinking.PNG
 ========================================================= */
 
 const UI_CONFIG = {
@@ -238,7 +243,7 @@ const relicLoadout = {
 
 /* =========================================================
    QUEST DATABASE
-   artwork = faded card background image.
+   artwork = large faded card background image.
 ========================================================= */
 
 const questDatabase = [
@@ -253,10 +258,14 @@ const questDatabase = [
 
         artwork: "assets/quests/morning-walk.png",
 
-        tags: ["Fitness", "Health"],
-        eventTags: [],
-
         rarity: "Common",
+
+        tags: [
+            "Fitness",
+            "Health"
+        ],
+
+        eventTags: [],
 
         rewards: {
 
@@ -282,6 +291,88 @@ const questDatabase = [
     },
 
     {
+        id: "q002",
+
+        name: "Tidy One Area",
+        description: "Clean or organize one small area of your home.",
+
+        type: QUEST_TYPES.NORMAL,
+
+        artwork: "assets/quests/tidy-one-area.png",
+
+        rarity: "Common",
+
+        tags: [
+            "Home"
+        ],
+
+        eventTags: [],
+
+        rewards: {
+
+            xp: 20,
+            gold: 12,
+            gems: 0,
+
+            stats: {
+                Fitness: 0,
+                Health: 0,
+                Wisdom: 0,
+                Home: 6
+            },
+
+            items: [],
+            relics: []
+        },
+
+        boardConfig: {
+            expiresAfterMinutes: 180,
+            cooldownMinutes: 15
+        }
+    },
+
+    {
+        id: "q003",
+
+        name: "Focused Reading",
+        description: "Read something useful for 20 minutes.",
+
+        type: QUEST_TYPES.NORMAL,
+
+        artwork: "assets/quests/focused-reading.png",
+
+        rarity: "Common",
+
+        tags: [
+            "Wisdom"
+        ],
+
+        eventTags: [],
+
+        rewards: {
+
+            xp: 30,
+            gold: 10,
+            gems: 0,
+
+            stats: {
+                Fitness: 0,
+                Health: 0,
+                Wisdom: 8,
+                Home: 0
+            },
+
+            items: [],
+            relics: []
+        },
+
+        boardConfig: {
+            expiresAfterMinutes: 180,
+            cooldownMinutes: 15
+        }
+    },
+
+    {
         id: "d001",
 
         name: "Drink Water",
@@ -291,10 +382,13 @@ const questDatabase = [
 
         artwork: "assets/quests/drink-water.png",
 
-        tags: ["Health"],
-        eventTags: [],
-
         rarity: "Daily",
+
+        tags: [
+            "Health"
+        ],
+
+        eventTags: [],
 
         rewards: {
 
@@ -322,6 +416,49 @@ const questDatabase = [
     },
 
     {
+        id: "d002",
+
+        name: "Daily Planning",
+        description: "Write down your top priorities for the day.",
+
+        type: QUEST_TYPES.DAILY,
+
+        artwork: "assets/quests/daily-planning.png",
+
+        rarity: "Daily",
+
+        tags: [
+            "Wisdom"
+        ],
+
+        eventTags: [],
+
+        rewards: {
+
+            xp: 20,
+            gold: 8,
+            gems: 0,
+
+            stats: {
+                Fitness: 0,
+                Health: 0,
+                Wisdom: 5,
+                Home: 0
+            },
+
+            items: [],
+            relics: []
+        },
+
+        reset: "daily",
+
+        boardConfig: {
+            expiresAfterMinutes: 180,
+            cooldownMinutes: 15
+        }
+    },
+
+    {
         id: "eq001",
 
         name: "Carve a Pumpkin",
@@ -331,10 +468,16 @@ const questDatabase = [
 
         artwork: "assets/quests/carve-pumpkin.png",
 
-        tags: ["Home", "Creativity"],
-        eventTags: ["halloween2026"],
-
         rarity: "Event",
+
+        tags: [
+            "Home",
+            "Creativity"
+        ],
+
+        eventTags: [
+            "halloween2026"
+        ],
 
         rewards: {
 
@@ -403,15 +546,20 @@ const bossDatabase = [
 
         description: "A stubborn early-game boss with a greedy crown and too much confidence.",
 
-        artwork: "assets/bosses/goblin-king.png",
+        artwork: "assets/bosses/goblinking.PNG",
 
         maxHp: 100,
         hp: 100,
 
         regenRate: 1,
 
-        weaknesses: ["Fitness"],
-        resistances: ["Home"],
+        weaknesses: [
+            "Fitness"
+        ],
+
+        resistances: [
+            "Home"
+        ],
 
         modifiers: [],
 
@@ -453,15 +601,21 @@ const bossDatabase = [
 
         description: "An ancient guardian of roots, moss and quiet discipline.",
 
-        artwork: "assets/bosses/forest-warden.png",
+        artwork: "assets/bosses/forestwarden.PNG",
 
         maxHp: 250,
         hp: 250,
 
         regenRate: 2,
 
-        weaknesses: ["Wisdom", "Home"],
-        resistances: ["Health"],
+        weaknesses: [
+            "Wisdom",
+            "Home"
+        ],
+
+        resistances: [
+            "Health"
+        ],
 
         modifiers: [
 
@@ -511,15 +665,21 @@ const bossDatabase = [
 
         description: "A massive armored tyrant forged from steel, fire and relentless pressure.",
 
-        artwork: "assets/bosses/iron-tyrant.png",
+        artwork: "assets/bosses/irontyrant.PNG",
 
         maxHp: 500,
         hp: 500,
 
         regenRate: 3,
 
-        weaknesses: ["Health"],
-        resistances: ["Fitness", "Home"],
+        weaknesses: [
+            "Health"
+        ],
+
+        resistances: [
+            "Fitness",
+            "Home"
+        ],
 
         modifiers: [
 
@@ -622,20 +782,20 @@ const relicDatabase = [
     {
         id: "r002",
 
-        name: "Warden Seed",
+        name: "Emerald Branch",
 
         rarity: "Epic",
 
-        description: "-10% Quest Cooldown Time",
+        description: "+15% Wisdom XP Gain",
 
-        icon: "assets/relics/warden-seed.png",
+        icon: "assets/relics/emerald-branch.png",
 
         effects: [
 
             {
-                type: EFFECT_TYPES.RELATIVE_DEBUFF,
-                attribute: "quest_cooldown",
-                amount: 10,
+                type: EFFECT_TYPES.RELATIVE_BUFF,
+                attribute: "wisdom_xp_gain",
+                amount: 15,
                 duration: "permanent"
             }
         ]
@@ -644,20 +804,20 @@ const relicDatabase = [
     {
         id: "r003",
 
-        name: "Iron Core",
+        name: "Tyrant Core",
 
         rarity: "Legendary",
 
-        description: "+15% Boss Damage",
+        description: "+25% Boss Damage",
 
-        icon: "assets/relics/iron-core.png",
+        icon: "assets/relics/tyrant-core.png",
 
         effects: [
 
             {
                 type: EFFECT_TYPES.RELATIVE_BUFF,
                 attribute: "boss_damage",
-                amount: 15,
+                amount: 25,
                 duration: "permanent"
             }
         ]
@@ -723,6 +883,33 @@ const itemDatabase = [
                 durationValue: 1
             }
         ]
+    },
+
+    {
+        id: "i003",
+
+        name: "Golden Charm",
+
+        description: "+25% Gold Gain for 1 hour.",
+
+        icon: "assets/items/golden-charm.png",
+
+        category: "boost",
+
+        cost: 140,
+
+        stackable: false,
+
+        effects: [
+
+            {
+                type: EFFECT_TYPES.RELATIVE_BUFF,
+                attribute: "gold_gain",
+                amount: 25,
+                duration: "hours",
+                durationValue: 1
+            }
+        ]
     }
 ];
 
@@ -732,31 +919,51 @@ const itemDatabase = [
 ========================================================= */
 
 function getQuestsByType(type) {
-    return questDatabase.filter(q => q.type === type);
+    return questDatabase.filter(
+        quest => quest.type === type
+    );
 }
 
 function getBossesUnlockedAtLevel(level) {
-    return bossDatabase.filter(b => b.unlockLevel <= level);
-}
-
-function getBossById(id) {
-    return bossDatabase.find(boss => boss.id === id);
+    return bossDatabase.filter(
+        boss => level >= boss.unlockLevel
+    );
 }
 
 function getQuestById(id) {
-    return questDatabase.find(quest => quest.id === id);
+    return questDatabase.find(
+        quest => quest.id === id
+    );
+}
+
+function getBossById(id) {
+    return bossDatabase.find(
+        boss => boss.id === id
+    );
 }
 
 function getItemById(id) {
-    return itemDatabase.find(item => item.id === id);
+    return itemDatabase.find(
+        item => item.id === id
+    );
 }
 
 function getRelicById(id) {
-    return relicDatabase.find(relic => relic.id === id);
+    return relicDatabase.find(
+        relic => relic.id === id
+    );
+}
+
+function getEventById(id) {
+    return eventDatabase.find(
+        event => event.id === id
+    );
 }
 
 function getEventByTag(tag) {
-    return eventDatabase.find(event => event.tag === tag);
+    return eventDatabase.find(
+        event => event.tag === tag
+    );
 }
 
 
@@ -772,6 +979,7 @@ window.playerData = playerData;
 window.questBoardState = questBoardState;
 
 window.bossProgression = bossProgression;
+window.bossChallengeState = bossChallengeState;
 
 window.questDatabase = questDatabase;
 window.eventDatabase = eventDatabase;
@@ -781,7 +989,6 @@ window.relicDatabase = relicDatabase;
 
 window.activeEffects = activeEffects;
 window.relicLoadout = relicLoadout;
-window.bossChallengeState = bossChallengeState;
 
 window.QUEST_TYPES = QUEST_TYPES;
 
@@ -792,8 +999,9 @@ window.EFFECT_DURATIONS = EFFECT_DURATIONS;
 window.getQuestsByType = getQuestsByType;
 window.getBossesUnlockedAtLevel = getBossesUnlockedAtLevel;
 
-window.getBossById = getBossById;
 window.getQuestById = getQuestById;
+window.getBossById = getBossById;
 window.getItemById = getItemById;
 window.getRelicById = getRelicById;
+window.getEventById = getEventById;
 window.getEventByTag = getEventByTag;
